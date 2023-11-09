@@ -16,7 +16,7 @@ async function bootstrap() {
           format: winston.format.combine(
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), // 날짜 형식
             winston.format.prettyPrint({ colorize: true }),
-            winston.format.label({ label: 'project name' }), /// 프로젝트 명 바꾸기
+            winston.format.label({ label: 'moneynote' }), /// 프로젝트 명 바꾸기
             winston.format.printf(
               ({ level, message, label, stack, timestamp }) => {
                 let logColor
@@ -53,7 +53,7 @@ async function bootstrap() {
           format: winston.format.combine(
             winston.format.errors({ stack: true }),
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-            winston.format.label({ label: 'project name' }), // 프로젝트 명 바꾸기
+            winston.format.label({ label: 'moneynote' }), // 프로젝트 명 바꾸기
             winston.format.printf(({ level, message, label, timestamp }) => {
               let logColor
               switch (level) {
@@ -84,7 +84,7 @@ async function bootstrap() {
           maxsize: 5000000,
           format: winston.format.combine(
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-            winston.format.label({ label: 'project name' }), // 프로젝트 명 바꾸기
+            winston.format.label({ label: 'moneynote' }), // 프로젝트 명 바꾸기
             winston.format.printf(({ level, message, timestamp }) => {
               return `${timestamp} [${level.toUpperCase()}] - ${message}`
             }),
@@ -97,8 +97,8 @@ async function bootstrap() {
   app.enableCors()
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('project name') // 프로젝트 명 바꾸기
-    .setDescription('The project name API description') // 프로젝트 명 바꾸기
+    .setTitle('moneynote') // 프로젝트 명 바꾸기
+    .setDescription('The moneynote API description') // 프로젝트 명 바꾸기
     .setVersion('1.0')
     .addBearerAuth()
     .build()
