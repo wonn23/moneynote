@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AuthGuard } from '@nestjs/passport'
-import { UserService } from '../service/user.service'
+import { UserService } from '../services/user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { User } from '../entities/user.entity'
 

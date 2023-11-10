@@ -6,7 +6,7 @@ import {
   Get,
   Request,
 } from '@nestjs/common'
-import { AuthService } from '../service/auth.service'
+import { AuthService } from '../services/auth.service'
 import { SignInDto } from '../dto/signin.dto'
 import { UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'

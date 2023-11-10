@@ -2,7 +2,7 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { AuthService } from '../service/auth.service'
+import { AuthService } from '../services/auth.service'
 
 // refresh token 검증 전략
 @Injectable()
