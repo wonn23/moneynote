@@ -10,7 +10,7 @@ import { Category } from '../entities/category.entity'
 
 @Injectable()
 export class BudgetService {
-  constructor(private budgetrepository: BudgetRepository) {}
+  constructor(private budgetRepository: BudgetRepository) {}
   async createBudget(createBudgetDto: CreateBudgetDto): Promise<void> {
     try {
       const { yearMonth, amount, category } = createBudgetDto
@@ -24,25 +24,36 @@ export class BudgetService {
         throw new NotFoundException('카테고리를 찾을 수 없습니다.')
       }
 
-      // foundCategory = { id : 1, name: '전체' }
-      const budget = {
-        yearMonth,
-        amount,
-        category: foundCategory,
-      }
+      // 해당 연월의 카테고리 예산이 이미 있는지 확인
+      const existingBudget = await this.budgetRepository.findOne({
+        where: { yearMonth, category: { id: foundCategory.id } },
+        relations: ['category'],
+      })
 
-      await this.budgetrepository.save(budget)
+      if (existingBudget && existingBudget.category.id === foundCategory.id) {
+        // 이미 예산이 존재하면 수정
+        existingBudget.amount = amount
+        await this.budgetRepository.save(existingBudget)
+      } else {
+        // 예산이 존재하지 않으면 새로 생성
+        const newBudget = this.budgetRepository.create({
+          yearMonth,
+          amount,
+          category: foundCategory,
+        })
+        await this.budgetRepository.save(newBudget)
+      }
     } catch (error) {
       throw new InternalServerErrorException('예산 생산에 문제가 발생했습니다.')
     }
   }
 
-  findAll() {
-    return `This action returns all budget`
+  async designBudget() {
+    return
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} budget`
+  findAll() {
+    return `This action returns all budget`
   }
 
   update(id: number, updateBudgetDto: UpdateBudgetDto) {

@@ -54,26 +54,28 @@ async function bootstrap() {
             winston.format.errors({ stack: true }),
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             winston.format.label({ label: 'moneynote' }), // 프로젝트 명 바꾸기
-            winston.format.printf(({ level, message, label, timestamp }) => {
-              let logColor
-              switch (level) {
-                case 'log':
-                  logColor = '\x1b[34m' // 파란색
-                  break
-                case 'error':
-                  logColor = '\x1b[31m' // 빨간색
-                  break
-                case 'warn':
-                  logColor = '\x1b[33m' // 노란색
-                case 'info':
-                  logColor = '\x1b[32m' // 초록색
-                  break
-                default:
-                  logColor = '\x1b[0m' // 기본 색상 (흰색)
-                  break
-              }
-              return `[${label}] ${logColor}${timestamp} [${level.toUpperCase()}] - ${message}\x1b[0m`
-            }),
+            winston.format.printf(
+              ({ level, message, label, stack, timestamp }) => {
+                let logColor
+                switch (level) {
+                  case 'log':
+                    logColor = '\x1b[34m' // 파란색
+                    break
+                  case 'error':
+                    logColor = '\x1b[31m' // 빨간색
+                    break
+                  case 'warn':
+                    logColor = '\x1b[33m' // 노란색
+                  case 'info':
+                    logColor = '\x1b[32m' // 초록색
+                    break
+                  default:
+                    logColor = '\x1b[0m' // 기본 색상 (흰색)
+                    break
+                }
+                return `[${label}] ${logColor}${timestamp} [${level.toUpperCase()}] - ${message}\n${stack}\x1b[0m`
+              },
+            ),
           ),
         }),
         new winston.transports.File({
@@ -85,8 +87,8 @@ async function bootstrap() {
           format: winston.format.combine(
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             winston.format.label({ label: 'moneynote' }), // 프로젝트 명 바꾸기
-            winston.format.printf(({ level, message, timestamp }) => {
-              return `${timestamp} [${level.toUpperCase()}] - ${message}`
+            winston.format.printf(({ level, message, stack, timestamp }) => {
+              return `${timestamp} [${level.toUpperCase()}] - ${message}\n${stack}`
             }),
           ),
         }),
