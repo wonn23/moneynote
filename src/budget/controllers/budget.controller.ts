@@ -7,18 +7,21 @@ import {
   Param,
   UseGuards,
   Delete,
+  Query,
+  UsePipes,
 } from '@nestjs/common'
 import { BudgetService } from '../services/budget.service'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { AuthGuard } from '@nestjs/passport'
+import { getBudgetValidationPipe } from '../pipes/get-budget.pipe'
 
 @Controller('budget')
 export class BudgetController {
   constructor(private readonly budgetService: BudgetService) {}
 
   @Post()
-  // @UseGuards(AuthGuard())
+  @UseGuards(AuthGuard())
   async create(@Body() createBudgetDto: CreateBudgetDto): Promise<void> {
     this.budgetService.createBudget(createBudgetDto)
   }
@@ -29,9 +32,19 @@ export class BudgetController {
     this.budgetService.designBudget()
   }
 
+  @Get('/all:yearMonth')
+  @UseGuards(AuthGuard())
+  @UsePipes(new getBudgetValidationPipe())
+  async findAll(@Query('yearMonth') yearMonth: string) {
+    return this.budgetService.findAllBudget(yearMonth)
+  }
+
   @Get()
-  async findAll() {
-    return this.budgetService.findAll()
+  @UseGuards(AuthGuard())
+  @UsePipes(new getBudgetValidationPipe())
+  async findOne(@Query('yearMonth') yearMonth: string) {
+    console.log(yearMonth)
+    return this.budgetService.findOneBudget(yearMonth)
   }
 
   @Patch(':id')

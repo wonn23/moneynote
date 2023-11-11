@@ -7,6 +7,7 @@ import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { BudgetRepository } from '../repositories/budget.repository'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { Category } from '../entities/category.entity'
+import { Like } from 'typeorm'
 
 @Injectable()
 export class BudgetService {
@@ -52,8 +53,30 @@ export class BudgetService {
     return
   }
 
-  findAll() {
-    return `This action returns all budget`
+  async findAllBudget(yearMonth: string) {
+    // 'YYYY-MM'에서 YYYY만 뽑기
+    const year = yearMonth.substring(0, 4)
+    const budgets = await this.budgetRepository.find({
+      where: { yearMonth: Like(`${year}%`) },
+    })
+    if (!budgets || budgets.length === 0) {
+      throw new NotFoundException(
+        '해당 연월 패턴을 가진 데이터를 찾을 수 없습니다.',
+      )
+    }
+
+    return budgets
+  }
+
+  async findOneBudget(yearMonth: string) {
+    const budgets = await this.budgetRepository.find({
+      where: { yearMonth },
+    })
+
+    if (!budgets || budgets.length === 0) {
+      throw new NotFoundException('해당 월의 예산 데이터를 찾을 수 없습니다.')
+    }
+    return budgets
   }
 
   update(id: number, updateBudgetDto: UpdateBudgetDto) {
