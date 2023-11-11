@@ -18,7 +18,7 @@ export class Budget extends BaseEntity {
   @Column({ type: 'varchar', length: 7 })
   yearMonth: string
 
-  @Column()
+  @Column({ type: 'integer' })
   amount: number
 
   @CreateDateColumn()

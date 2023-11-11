@@ -8,16 +8,16 @@ import {
   Delete,
 } from '@nestjs/common'
 import { BudgetService } from '../services/budget.service'
-import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
+import { CreateBudgetDto } from '../dto/create-budget.dto'
 
 @Controller('budget')
 export class BudgetController {
   constructor(private readonly budgetService: BudgetService) {}
 
   @Post()
-  create(@Body() createBudgetDto: CreateBudgetDto) {
-    return this.budgetService.create(createBudgetDto)
+  async create(@Body() createBudgetDto: CreateBudgetDto): Promise<void> {
+    this.budgetService.createBudget(createBudgetDto)
   }
 
   @Get()

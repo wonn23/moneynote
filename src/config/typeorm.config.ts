@@ -1,6 +1,6 @@
-import { ConfigService } from '@nestjs/config';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { ConfigService } from '@nestjs/config'
+import { TypeOrmModuleOptions } from '@nestjs/typeorm'
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies'
 
 export const typeORMConfig = async (
   configService: ConfigService,
@@ -15,6 +15,7 @@ export const typeORMConfig = async (
     entities: [__dirname + '/../**/*.entity.{js,ts}'],
     synchronize: configService.get<boolean>('DB_SYNCHRONIZE') || false,
     namingStrategy: new SnakeNamingStrategy(),
+    // dropSchema: true,
     // logging: true,
-  };
-};
+  }
+}
