@@ -3,62 +3,66 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   UseGuards,
   Delete,
   Query,
   UsePipes,
+  Put,
 } from '@nestjs/common'
 import { BudgetService } from '../services/budget.service'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { AuthGuard } from '@nestjs/passport'
 import { getBudgetValidationPipe } from '../pipes/get-budget.pipe'
+import { Budget } from '../entities/budget.entity'
 
 @Controller('budget')
 export class BudgetController {
   constructor(private readonly budgetService: BudgetService) {}
 
   @Post()
-  @UseGuards(AuthGuard())
+  // @UseGuards(AuthGuard())
   async create(@Body() createBudgetDto: CreateBudgetDto): Promise<void> {
     this.budgetService.createBudget(createBudgetDto)
   }
 
   @Post()
-  @UseGuards(AuthGuard())
+  // @UseGuards(AuthGuard('jwt'))
   async design() {
     this.budgetService.designBudget()
   }
 
-  @Get('/all:yearMonth')
-  @UseGuards(AuthGuard())
+  @Get('/all')
+  // @UseGuards(AuthGuard())
   @UsePipes(new getBudgetValidationPipe())
-  async findAll(@Query('yearMonth') yearMonth: string) {
-    return this.budgetService.findAllBudget(yearMonth)
+  async findBudgetByYear(
+    @Query('yearMonth') yearMonth: string,
+  ): Promise<Budget[]> {
+    return this.budgetService.findBudgetByYear(yearMonth)
   }
 
   @Get()
-  @UseGuards(AuthGuard())
+  // @UseGuards(AuthGuard())
   @UsePipes(new getBudgetValidationPipe())
-  async findOne(@Query('yearMonth') yearMonth: string) {
-    console.log(yearMonth)
-    return this.budgetService.findOneBudget(yearMonth)
+  async findBudgetByYearAndMonth(
+    @Query('yearMonth') yearMonth: string,
+  ): Promise<Budget[]> {
+    return this.budgetService.findBudgetByYearAndMonth(yearMonth)
   }
 
-  @Patch(':id')
-  @UseGuards(AuthGuard())
+  @Put(':id')
+  // @UseGuards(AuthGuard())
   async update(
     @Param('id') id: string,
     @Body() updateBudgetDto: UpdateBudgetDto,
   ) {
-    return this.budgetService.update(+id, updateBudgetDto)
+    return this.budgetService.setBudget(+id, updateBudgetDto)
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard())
-  async remove(@Param('id') id: string) {
-    return this.budgetService.remove(+id)
+  // @UseGuards(AuthGuard())
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.budgetService.deleteBudget(+id)
   }
 }

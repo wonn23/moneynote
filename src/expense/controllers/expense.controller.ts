@@ -6,37 +6,43 @@ import {
   Patch,
   Param,
   Delete,
+  UsePipes,
 } from '@nestjs/common'
 import { ExpenseService } from '../services/expense.service'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
+import { ExpenseValidationPipe } from '../pipes/expense.pipe'
 
 @Controller('expense')
 export class ExpenseController {
   constructor(private readonly expenseService: ExpenseService) {}
 
   @Post()
-  create(@Body() createExpenseDto: CreateExpenseDto) {
-    return this.expenseService.create(createExpenseDto)
+  @UsePipes(ExpenseValidationPipe)
+  async create(@Body() createExpenseDto: CreateExpenseDto) {
+    return this.expenseService.createExpense(createExpenseDto)
   }
 
   @Get()
-  findAll() {
-    return this.expenseService.findAll()
+  async findAll() {
+    return this.expenseService.getAllExpense()
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.expenseService.findOne(+id)
+  async findOne(@Param('id') id: string) {
+    return this.expenseService.getOneExpense(+id)
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateExpenseDto: UpdateExpenseDto) {
-    return this.expenseService.update(+id, updateExpenseDto)
+  async update(
+    @Param('id') id: string,
+    @Body() updateExpenseDto: UpdateExpenseDto,
+  ) {
+    return this.expenseService.setExpense(+id, updateExpenseDto)
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.expenseService.remove(+id)
+  async remove(@Param('id') id: string): Promise<void> {
+    this.expenseService.deleteExpense(+id)
   }
 }

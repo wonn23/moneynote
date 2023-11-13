@@ -7,7 +7,8 @@ import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { BudgetRepository } from '../repositories/budget.repository'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { Category } from '../entities/category.entity'
-import { Like } from 'typeorm'
+import { EntityNotFoundError, Like } from 'typeorm'
+import { Budget } from '../entities/budget.entity'
 
 @Injectable()
 export class BudgetService {
@@ -53,22 +54,20 @@ export class BudgetService {
     return
   }
 
-  async findAllBudget(yearMonth: string) {
+  async findBudgetByYear(yearMonth: string): Promise<Budget[]> {
     // 'YYYY-MM'에서 YYYY만 뽑기
     const year = yearMonth.substring(0, 4)
     const budgets = await this.budgetRepository.find({
       where: { yearMonth: Like(`${year}%`) },
     })
     if (!budgets || budgets.length === 0) {
-      throw new NotFoundException(
-        '해당 연월 패턴을 가진 데이터를 찾을 수 없습니다.',
-      )
+      throw new NotFoundException('해당 연도의 예산 데이터를 찾을 수 없습니다.')
     }
 
     return budgets
   }
 
-  async findOneBudget(yearMonth: string) {
+  async findBudgetByYearAndMonth(yearMonth: string): Promise<Budget[]> {
     const budgets = await this.budgetRepository.find({
       where: { yearMonth },
     })
@@ -79,11 +78,26 @@ export class BudgetService {
     return budgets
   }
 
-  update(id: number, updateBudgetDto: UpdateBudgetDto) {
-    return `This action updates a #${id} budget`
+  async setBudget(id: number, updateBudgetDto: UpdateBudgetDto) {
+    try {
+      const budget = await this.budgetRepository.findOneOrFail({
+        where: { id },
+      })
+
+      budget.amount = updateBudgetDto.amount
+
+      await this.budgetRepository.save(budget)
+    } catch (error) {
+      if (error instanceof EntityNotFoundError) {
+        throw new NotFoundException(`해당 ${id}의 예산을 찾을 수 없습니다.`)
+      }
+      throw new InternalServerErrorException(
+        '예산을 수정하는데 문제가 있습니다.',
+      )
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} budget`
+  async deleteBudget(id: number) {
+    await this.budgetRepository.softDelete(id)
   }
 }

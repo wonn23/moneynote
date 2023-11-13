@@ -18,10 +18,10 @@ export class Expense extends BaseEntity {
   @Column()
   date: Date
 
-  @Column()
+  @Column({ nullable: true })
   totalSum: number
 
-  @Column()
+  @Column({ nullable: true })
   currentSum: number
 
   @Column()
