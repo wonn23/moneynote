@@ -12,7 +12,8 @@ export class ExpenseValidationPipe implements PipeTransform<any> {
   }
 
   transform(value: any, metadata: ArgumentMetadata) {
-    const date = undefined || new Date().toString()
+    const date =
+      value.date === undefined || '' ? new Date().toString() : value.date
 
     if (!this.isValidDate(date)) {
       throw new BadRequestException(`날짜를 확인해 주세요.`)

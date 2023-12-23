@@ -7,9 +7,7 @@ import { ExpenseRepository } from '../repositories/expense.repository'
 export class ExpenseService {
   constructor(private expenseRepository: ExpenseRepository) {}
   async createExpense(createExpenseDto: CreateExpenseDto) {
-    const date = new Date()
-
-    const { content, isSum } = createExpenseDto
+    const { date, content, isSum } = createExpenseDto
 
     const expense = {
       date,

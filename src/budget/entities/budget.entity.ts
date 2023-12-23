@@ -10,6 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm'
 import { Category } from './category.entity'
+import { User } from 'src/user/entities/user.entity'
 @Entity('budget')
 export class Budget extends BaseEntity {
   @PrimaryGeneratedColumn()
@@ -31,6 +32,10 @@ export class Budget extends BaseEntity {
   deletedAt: Date
 
   @ManyToOne(() => Category)
-  @JoinColumn({ name: 'categoryId' })
+  @JoinColumn({ name: 'category_id' })
   category: Category
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User
 }

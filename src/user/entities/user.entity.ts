@@ -3,11 +3,13 @@ import {
   Column,
   Entity,
   JoinColumn,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm'
 import { Refresh } from './refresh.entity'
+import { Budget } from 'src/budget/entities/budget.entity'
 
 @Entity('users')
 @Unique(['username'])
@@ -15,7 +17,7 @@ export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: string
 
-  @Column({ length: 50 })
+  @Column({ length: 20 })
   username: string
 
   @Column()
@@ -24,4 +26,7 @@ export class User extends BaseEntity {
   @OneToOne(() => Refresh, { nullable: true })
   @JoinColumn()
   refresh: Refresh
+
+  @OneToMany(() => Budget, (budget) => budget.user)
+  budget: Budget[]
 }

@@ -15,7 +15,7 @@ export const typeORMConfig = async (
     entities: [__dirname + '/../**/*.entity.{js,ts}'],
     synchronize: configService.get<boolean>('DB_SYNCHRONIZE') || false,
     namingStrategy: new SnakeNamingStrategy(),
-    // dropSchema: true,
+    dropSchema: true,
     // logging: true,
   }
 }

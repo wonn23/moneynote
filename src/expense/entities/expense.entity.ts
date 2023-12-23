@@ -1,4 +1,5 @@
 import { Category } from 'src/budget/entities/category.entity'
+import { User } from 'src/user/entities/user.entity'
 import {
   BaseEntity,
   Column,
@@ -40,6 +41,10 @@ export class Expense extends BaseEntity {
   deletedAt: Date
 
   @ManyToOne(() => Category)
-  @JoinColumn({ name: 'categoryId' })
+  @JoinColumn({ name: 'category_id', referencedColumnName: 'id' })
   category: Category
+
+  @ManyToOne(() => User)
+  @JoinColumn([{ name: 'user_id', referencedColumnName: 'id' }])
+  user: User
 }
