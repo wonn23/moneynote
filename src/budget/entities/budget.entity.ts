@@ -11,13 +11,17 @@ import {
 } from 'typeorm'
 import { Category } from './category.entity'
 import { User } from 'src/user/entities/user.entity'
+
 @Entity('budget')
 export class Budget extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number
 
-  @Column({ type: 'varchar', length: 7 })
-  yearMonth: string
+  @Column({ type: 'integer' })
+  year: number
+
+  @Column({ type: 'integer' })
+  month: number
 
   @Column({ type: 'integer' })
   amount: number
