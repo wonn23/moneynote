@@ -16,39 +16,45 @@ import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { AuthGuard } from '@nestjs/passport'
 import { getBudgetValidationPipe } from '../pipes/get-budget.pipe'
 import { Budget } from '../entities/budget.entity'
+import { BudgetRecommendationDto } from '../dto/budget-recommendation.dto'
 
-@Controller('budget')
+@Controller('budgets')
 export class BudgetController {
   constructor(private readonly budgetService: BudgetService) {}
 
   @Post()
+  // 예산 추가
   // @UseGuards(AuthGuard())
-  async create(@Body() createBudgetDto: CreateBudgetDto): Promise<void> {
-    this.budgetService.createBudget(createBudgetDto)
+  async create(@Body() createBudgetDto: CreateBudgetDto): Promise<Budget> {
+    return this.budgetService.createBudget(createBudgetDto)
   }
 
-  @Post()
+  @Post('/design')
+  // 예산 설계 추천
   // @UseGuards(AuthGuard('jwt'))
-  async design() {
-    this.budgetService.designBudget()
-  }
-
-  @Get('/all')
-  // @UseGuards(AuthGuard())
-  @UsePipes(new getBudgetValidationPipe())
-  async findBudgetByYear(
-    @Query('yearMonth') yearMonth: string,
-  ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYear(yearMonth)
+  async design(
+    @Body('totalAmount') totalAmount: number,
+  ): Promise<BudgetRecommendationDto> {
+    return this.budgetService.designBudget(totalAmount)
   }
 
   @Get()
+  // 예산 조회 연도별
+  // @UseGuards(AuthGuard())
+  @UsePipes(new getBudgetValidationPipe())
+  async findBudgetByYear(@Query('year') year: number): Promise<Budget[]> {
+    return this.budgetService.findBudgetByYear(year)
+  }
+
+  @Get()
+  // 예산 조회 연월별
   // @UseGuards(AuthGuard())
   @UsePipes(new getBudgetValidationPipe())
   async findBudgetByYearAndMonth(
-    @Query('yearMonth') yearMonth: string,
+    @Query('year') year: number,
+    @Query('month') month: number,
   ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYearAndMonth(yearMonth)
+    return this.budgetService.findBudgetByYearAndMonth(year, month)
   }
 
   @Put(':id')
@@ -56,8 +62,8 @@ export class BudgetController {
   async update(
     @Param('id') id: string,
     @Body() updateBudgetDto: UpdateBudgetDto,
-  ) {
-    return this.budgetService.setBudget(+id, updateBudgetDto)
+  ): Promise<Budget> {
+    return this.budgetService.updateBudget(+id, updateBudgetDto)
   }
 
   @Delete(':id')

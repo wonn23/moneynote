@@ -8,5 +8,5 @@ export class UpdateBudgetDto extends PartialType(CreateBudgetDto) {
   amount: number
 
   @IsEnum(categoryEnum)
-  category: string
+  category: categoryEnum
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { BudgetService } from './services/budget.service'
+import { BudgetStatsService } from './services/budgetStats.service'
 import { BudgetController } from './controllers/budget.controller'
 import { BudgetRepository } from './repositories/budget.repository'
 import { Budget } from './entities/budget.entity'
@@ -15,6 +16,6 @@ import { PassportModule } from '@nestjs/passport'
     TypeOrmModule.forFeature([Budget, Category]),
   ],
   controllers: [BudgetController],
-  providers: [BudgetService],
+  providers: [BudgetService, BudgetStatsService],
 })
 export class BudgetModule {}
