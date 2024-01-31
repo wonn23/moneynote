@@ -8,12 +8,19 @@ import { TypeOrmExModule } from 'src/common/typeorm-ex.module'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { Category } from './entities/category.entity'
 import { PassportModule } from '@nestjs/passport'
+import { CategoryRepository } from './repositories/category.repository'
+import { UserRepository } from 'src/user/repositories/user.repository'
+import { User } from 'src/user/entities/user.entity'
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmExModule.forCustomRepository([BudgetRepository]),
-    TypeOrmModule.forFeature([Budget, Category]),
+    TypeOrmExModule.forCustomRepository([
+      BudgetRepository,
+      CategoryRepository,
+      UserRepository,
+    ]),
+    TypeOrmModule.forFeature([Budget, Category, User]),
   ],
   controllers: [BudgetController],
   providers: [BudgetService, BudgetStatsService],

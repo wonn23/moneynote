@@ -11,16 +11,31 @@ import { EntityNotFoundError } from 'typeorm'
 import { Budget } from '../entities/budget.entity'
 import { BudgetStatsService } from './budgetStats.service'
 import { BudgetRecommendationDto } from '../dto/budget-recommendation.dto'
+import { privateDecrypt } from 'crypto'
+import { User } from 'src/user/entities/user.entity'
 
 @Injectable()
 export class BudgetService {
+  private minimumRatio = 10
   constructor(
     private readonly budgetRepository: BudgetRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly budgetStatsService: BudgetStatsService,
   ) {}
 
-  async createBudget(createBudgetDto: CreateBudgetDto): Promise<Budget> {
+  // 예산 총합 구하기
+  getTotalAmount(arr: number[]): number {
+    let total: number = 0
+    arr.forEach((price) => {
+      total += price
+    })
+    return total
+  }
+
+  async createBudget(
+    createBudgetDto: CreateBudgetDto,
+    user: User,
+  ): Promise<Budget> {
     try {
       const { category, ...rest } = createBudgetDto
 
@@ -36,6 +51,7 @@ export class BudgetService {
       const budget = this.budgetRepository.create({
         ...rest,
         category: foundCategory,
+        user,
       })
 
       return await this.budgetRepository.save(budget)
@@ -78,6 +94,88 @@ export class BudgetService {
     }
 
     return new BudgetRecommendationDto(budgetRecommendations)
+  }
+
+  // 총액 비례 비율에 맞는 금액 계산
+  getPercentageTotalAmount(ratio: object[], totalPrice: number): object[] {
+    /**
+     * 카테고리별 예산 비율을 바탕으로 전체 예산 대비 각 카테고리의 예산을 계산하고, 10% 이하의 카테고리들을 '그외'로
+     * 분류하여 그 합계를 계산합니다.
+     * 'ratio' 객체 배열과 'totalPrice' 총 예산을 사용하여 각 카테고리의 비율에 따른 예산을 계산하고 객체 배열로 반환합니다.
+     */
+    ratio = ratio.map((obj) => ({
+      ...obj,
+      ratio: Number(obj['ratio']),
+    }))
+    const percentages = ratio.filter(
+      (percentageCategory) => percentageCategory['ratio'] >= this.minimumRatio,
+    )
+    const etc = ratio
+      .filter(
+        (percentageCategory) => percentageCategory['ratio'] < this.minimumRatio,
+      )
+      .reduce((sum, current) => {
+        return sum + current['ratio']
+      }, 0)
+
+    percentages.push({ category_name: '그외', ratio: etc })
+
+    const percentageAmount = percentages.map((percentageCategory) => ({
+      ...percentageCategory,
+      amount:
+        Math.floor((totalPrice * (percentageCategory['ratio'] / 100)) / 1000) *
+        1000,
+    }))
+
+    return percentageAmount
+  }
+
+  async getUserAverageRatio(totalPrice: number): Promise<object[]> {
+    /**
+     * 서브 쿼리 생성
+     * budgetRepository를 사용해서 Budget 엔티티에 대한 쿼리 빌더를 생성합니다.
+     * 이 쿼리는 각 category_id별로 amount의 합계('total_amount')와 모든 예산의 합계('total')를
+     * 계산하는 서브 쿼리를 생성합니다.
+     * groupBy('category_id')를 통해 카테고리별로 그룹화하고 결과적으로 각 카테고리에서 지툴된 총액과 전체 지출액을 계산합니다.
+     *
+     * 메인 쿼리 실행
+     * categoryRepository를 사용하여 Category 엔티티에 대한 쿼리를 구성합니다.
+     * 이 쿼리는 카테고리의 이름과 각 카테고리별 지출 총액이 전체 지출액에서 차지하는 비율(ratio)을 선택하여 반환합니다.
+     * 비율은 ROUND 함수를 사용하여 소수점 둘째 자리까지 반올림합니다.
+     * 서브 쿼리의 결과(subQuery)는 innerJoin을 통해 메인 쿼리에 조인되며, 이를 통해 각 카테고리의 이름과 해당 카테고리의 지출 비율이 계산됩니다.
+     *
+     * 결과
+     * getRawMany()를 호출하여 최종결과를 얻습니다. 이 결과는 카테고리의 이름과 해당 카테고리의 지출 비율을 포함합니다.
+     */
+    try {
+      const subQuery = this.budgetRepository
+        .createQueryBuilder()
+        .subQuery()
+        .select([
+          'category_id',
+          'SUM(amount) as total_amount',
+          '(select sum(total) from budgets) as total',
+        ])
+        .from(Budget, 'budget')
+        .groupBy('category_id')
+        .getQuery()
+
+      const result = this.categoryRepository
+        .createQueryBuilder('categories')
+        .select([
+          'categories.name',
+          'ROUND(sub.total_amount * 100.0:: decimal/sub.total:: decimal, 2) as ratio',
+        ])
+        .innerJoin(subQuery, 'sub', 'sub.category_id = category.id')
+        .orderBy('ratio', 'DESC')
+
+      const ratio = await result.getRawMany()
+      return this.getPercentageTotalAmount(ratio, totalPrice)
+    } catch (error) {
+      throw new InternalServerErrorException(
+        '추천 예산을 불러오는 도중 에러가 발생했습니다.',
+      )
+    }
   }
 
   async findBudgetByYear(year: number): Promise<Budget[]> {
