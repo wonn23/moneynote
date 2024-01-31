@@ -1,5 +1,4 @@
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
-import { categoryEnum } from '../types/budget.enum'
 
 @Entity('categories')
 export class Category extends BaseEntity {
@@ -7,8 +6,8 @@ export class Category extends BaseEntity {
   id: number
 
   @Column({
-    type: 'enum',
-    enum: categoryEnum,
+    type: 'varchar',
+    unique: true,
   })
-  name: categoryEnum
+  name: string
 }

@@ -7,7 +7,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common'
-import { ApiOperation, ApiTags } from '@nestjs/swagger'
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { AuthGuard } from '@nestjs/passport'
 import { UserService } from '../services/user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
@@ -18,7 +18,11 @@ import { User } from '../entities/user.entity'
 export class UserController {
   constructor(private userService: UserService) {}
 
-  @ApiOperation({ summary: '회원가입' })
+  @ApiOperation({
+    summary: '회원가입',
+    description: '유저를 등록합니다.',
+  })
+  @ApiResponse({ status: 201, description: 'sucess' })
   @Post('/signup')
   signUp(@Body(ValidationPipe) createUserDto: CreateUserDto): Promise<object> {
     return this.userService.signUp(createUserDto)
