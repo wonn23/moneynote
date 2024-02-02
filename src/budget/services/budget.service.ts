@@ -39,7 +39,7 @@ export class BudgetService {
     try {
       const { category, ...rest } = createBudgetDto
 
-      // categories 테이블에서 body값에 맞는 category_id 찾기
+      // category 테이블에서 body값에 맞는 category_id 찾기
       const foundCategory = await this.categoryRepository.findOne({
         where: { name: category },
       })
@@ -161,9 +161,9 @@ export class BudgetService {
         .getQuery()
 
       const result = this.categoryRepository
-        .createQueryBuilder('categories')
+        .createQueryBuilder('category')
         .select([
-          'categories.name',
+          'category.name',
           'ROUND(sub.total_amount * 100.0:: decimal/sub.total:: decimal, 2) as ratio',
         ])
         .innerJoin(subQuery, 'sub', 'sub.category_id = category.id')

@@ -23,6 +23,12 @@ export class User extends BaseEntity {
   @Column()
   password: string
 
+  @Column({ nullable: false, type: 'boolean', default: false })
+  ConsultingYn: boolean
+
+  @Column({ nullable: true, type: 'varchar', default: false })
+  discordUrl: string
+
   @OneToOne(() => Refresh, { nullable: true })
   @JoinColumn()
   refresh: Refresh

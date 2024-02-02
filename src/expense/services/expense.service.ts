@@ -21,7 +21,6 @@ export class ExpenseService {
   ) {}
 
   async createExpense(
-    id: number,
     createExpenseDto: CreateExpenseDto,
     user: User,
   ): Promise<Expense> {

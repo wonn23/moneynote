@@ -20,7 +20,13 @@ export class Expense extends BaseEntity {
   amount: number
 
   @Column({ nullable: true })
-  memo?: string
+  memo: string
+
+  @Column()
+  spentDate: Date
+
+  @Column({ default: false })
+  isExcluded: boolean
 
   @CreateDateColumn()
   createdAt: Date
@@ -30,9 +36,6 @@ export class Expense extends BaseEntity {
 
   @DeleteDateColumn()
   deletedAt: Date
-
-  @Column({ default: false })
-  isExcluded: boolean
 
   @ManyToOne(() => Category)
   @JoinColumn({ name: 'category_id', referencedColumnName: 'id' })
