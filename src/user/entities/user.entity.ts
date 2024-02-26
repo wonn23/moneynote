@@ -24,7 +24,7 @@ export class User extends BaseEntity {
   password: string
 
   @Column({ nullable: false, type: 'boolean', default: false })
-  ConsultingYn: boolean
+  consultingYn: boolean
 
   @Column({ nullable: true, type: 'varchar', default: false })
   discordUrl: string

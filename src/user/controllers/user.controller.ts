@@ -25,6 +25,10 @@ export class UserController {
   @ApiResponse({ status: 201, description: 'sucess' })
   @Post('/signup')
   signUp(@Body(ValidationPipe) createUserDto: CreateUserDto): Promise<object> {
-    return this.userService.signUp(createUserDto)
+    return this.userService.signUp(
+      createUserDto.username,
+      createUserDto.password,
+      createUserDto.consultingYn,
+    )
   }
 }
