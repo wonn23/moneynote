@@ -15,7 +15,10 @@ import { Refresh } from 'src/user/entities/refresh.entity'
     PassportModule.register({ defaultStrategy: 'jwt' }),
     TypeOrmExModule.forCustomRepository([UserRepository]),
     TypeOrmModule.forFeature([Refresh]),
-    JwtModule.register({}),
+    JwtModule.register({
+      secret: process.env.JWT_ACCESS_TOKEN_SECRET,
+      signOptions: { expiresIn: '1d' },
+    }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAccessTokenStrategy, JwtRefreshTokenStrategy],

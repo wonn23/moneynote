@@ -8,7 +8,7 @@ import { PassportModule } from '@nestjs/passport'
 @Module({
   imports: [
     TypeOrmExModule.forCustomRepository([UserRepository]),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule.register({ defaultStrategy: 'jwt', session: false }),
   ],
   controllers: [UserController],
   providers: [UserService],
