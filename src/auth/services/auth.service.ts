@@ -29,7 +29,7 @@ export class AuthService {
       const user = await this.usersRepository.findByUsername(username)
 
       if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
-      console.log(user)
+
       const isAuth = await bcrypt.compare(password, user.password)
 
       if (!isAuth) throw new UnauthorizedException('비밀번호가 틀렸습니다.')
@@ -41,13 +41,24 @@ export class AuthService {
       const salt = await bcrypt.genSalt()
       const hashedRefreshToken = await bcrypt.hash(refreshToken, salt) // db 유출 문제를 대비해 refresh token을 hash하여 저장
 
-      const refreshTokenEntity = new Refresh()
-      refreshTokenEntity.id = user.id
-      refreshTokenEntity.token = hashedRefreshToken
-      await this.refreshRepository.save(refreshTokenEntity)
+      const existingRefreshToken = await this.refreshRepository.findOneBy({
+        id: user.id,
+      })
 
-      user.refresh = refreshTokenEntity
-      await this.usersRepository.save(user)
+      if (existingRefreshToken) {
+        // 기존 리프레시 토큰이 있으면 업데이트
+        existingRefreshToken.token = hashedRefreshToken
+        await this.refreshRepository.save(existingRefreshToken)
+      } else {
+        // 새 리프레시 토큰 생성 및 저장
+        const refreshTokenEntity = new Refresh()
+        refreshTokenEntity.id = user.id
+        refreshTokenEntity.token = hashedRefreshToken
+        await this.refreshRepository.save(refreshTokenEntity)
+
+        user.refresh = refreshTokenEntity
+        await this.usersRepository.save(user)
+      }
 
       return { accessToken, refreshToken }
     } catch (error) {
