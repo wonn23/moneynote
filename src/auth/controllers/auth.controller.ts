@@ -31,7 +31,7 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
   @Post('/signin')
   signIn(@Body(ValidationPipe) signInDto: SignInDto): Promise<object> {
-    return this.authService.signIn(signInDto)
+    return this.authService.signIn(signInDto.username, signInDto.password)
   }
 
   @ApiOperation({

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -6,7 +7,6 @@ import {
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
-import { SignInDto } from '../dto/signin.dto'
 import { UserRepository } from '../../user/repositories/user.repository'
 import * as bcrypt from 'bcrypt'
 import { ConfigService } from '@nestjs/config'
@@ -24,14 +24,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signIn(signInDto: SignInDto): Promise<object> {
+  async signIn(username: string, password: string): Promise<object> {
     try {
-      const { username, password } = signInDto
-
       const user = await this.usersRepository.findByUsername(username)
 
       if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
-
+      console.log(user)
       const isAuth = await bcrypt.compare(password, user.password)
 
       if (!isAuth) throw new UnauthorizedException('비밀번호가 틀렸습니다.')
@@ -43,11 +41,13 @@ export class AuthService {
       const salt = await bcrypt.genSalt()
       const hashedRefreshToken = await bcrypt.hash(refreshToken, salt) // db 유출 문제를 대비해 refresh token을 hash하여 저장
 
-      const rToken = new Refresh()
-      rToken.id = user.id
-      rToken.token = hashedRefreshToken
+      const refreshTokenEntity = new Refresh()
+      refreshTokenEntity.id = user.id
+      refreshTokenEntity.token = hashedRefreshToken
+      await this.refreshRepository.save(refreshTokenEntity)
 
-      this.refreshRepository.save(rToken)
+      user.refresh = refreshTokenEntity
+      await this.usersRepository.save(user)
 
       return { accessToken, refreshToken }
     } catch (error) {
@@ -61,26 +61,35 @@ export class AuthService {
 
   // access token 생성
   async getJwtAccessToken(payload: object): Promise<string> {
-    const token = await this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
-      expiresIn: Number(
-        this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
-      ),
-    })
-
-    return token
+    try {
+      const token = await this.jwtService.sign(payload, {
+        secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
+        expiresIn: Number(
+          this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+        ),
+      })
+      return token
+    } catch (error) {
+      console.error('JWT 토큰 생성 중 에러 발생.', error)
+      throw new InternalServerErrorException('토큰 생성 실패')
+    }
   }
 
   // refresh token 생성
   async getJwtRefreshToken(payload: object) {
-    const token = await this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
-      expiresIn: Number(
-        this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
-      ),
-    })
+    try {
+      const token = await this.jwtService.sign(payload, {
+        secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
+        expiresIn: Number(
+          this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+        ),
+      })
 
-    return token
+      return token
+    } catch (error) {
+      console.error('JWT 토큰 생성 중 에러 발생.', error)
+      throw new InternalServerErrorException('토큰 생성 실패')
+    }
   }
 
   // 클라이언트의 refresh token과 해싱된 db의 refresh token 비교

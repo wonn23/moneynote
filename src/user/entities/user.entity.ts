@@ -30,7 +30,7 @@ export class User extends BaseEntity {
   discordUrl: string
 
   @OneToOne(() => Refresh, { nullable: true })
-  @JoinColumn()
+  @JoinColumn({ name: 'refresh_id' })
   refresh: Refresh
 
   @OneToMany(() => Budget, (budget) => budget.user)
