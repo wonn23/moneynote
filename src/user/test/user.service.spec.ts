@@ -3,6 +3,13 @@ import { UserService } from '../services/user.service'
 import { DataSource } from 'typeorm'
 import { UserRepository } from '../repositories/user.repository'
 import { ForbiddenException } from '@nestjs/common'
+import * as bcrypt from 'bcrypt'
+import { User } from '../entities/user.entity'
+
+jest.mock('bcrypt', () => ({
+  genSalt: jest.fn().mockResolvedValue('salt'),
+  hash: jest.fn().mockRejectedValue('hashedPassword'),
+}))
 
 const mockDataSource = {
   createQueryRunner: jest.fn().mockReturnValue({
@@ -10,7 +17,7 @@ const mockDataSource = {
     startTransaction: jest.fn(),
     manager: {
       getRepository: jest.fn().mockReturnValue({
-        findOne: jest.fn().mockResolvedValue(null), // 유저를 찾지 못한 경우를 가정
+        findOne: jest.fn().mockResolvedValue(null),
         save: jest.fn().mockResolvedValue({}),
       }),
     },
@@ -48,6 +55,7 @@ const mockUserRepository = {
 
 describe('UserService', () => {
   let service: UserService
+  let dataSource: DataSource
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -65,27 +73,51 @@ describe('UserService', () => {
     }).compile()
 
     service = module.get<UserService>(UserService)
+    dataSource = module.get<DataSource>(DataSource)
   })
 
-  it('회원가입 성공', async () => {
-    await expect(
-      service.signUp('wonn22', '1q2w3e4r5t!', true),
-    ).resolves.toStrictEqual({
-      message: '회원가입에 성공했습니다',
-    })
+  it('should be defined', () => {
+    expect(service).toBeDefined()
   })
 
-  it('회원가입 실패: 이미 존재하는 유저 이름', async () => {
-    mockDataSource
-      .createQueryRunner()
-      .manager.getRepository()
-      .findOne.mockResolvedValueOnce({
-        id: 1,
-        username: 'wonn22',
+  describe('signUp', () => {
+    const username = 'wonn22'
+    const password = '1q2w3e4r5t!'
+    const consultingYn = true
+    it('회원가입 성공', async () => {
+      jest
+        .spyOn(
+          dataSource.createQueryRunner().manager.getRepository(User),
+          'findOne',
+        )
+        .mockResolvedValueOnce(null)
+      jest
+        .spyOn(dataSource.createQueryRunner(), 'commitTransaction')
+        .mockResolvedValueOnce(undefined)
+
+      await expect(
+        service.signUp(username, password, consultingYn),
+      ).resolves.toStrictEqual({
+        message: '회원가입에 성공했습니다',
       })
+    })
 
-    await expect(
-      service.signUp('wonn22', '1q2w3e4r5t!', true),
-    ).rejects.toThrowError(ForbiddenException)
+    it('회원가입 실패: 이미 존재하는 유저 이름', async () => {
+      mockDataSource
+        .createQueryRunner()
+        .manager.getRepository()
+        .findOne.mockResolvedValueOnce({
+          id: 1,
+          username: 'wonn22',
+        })
+
+      await expect(
+        service.signUp('wonn22', '1q2w3e4r5t!', true),
+      ).rejects.toThrowError(ForbiddenException)
+    })
+
+    afterEach(() => {
+      jest.clearAllMocks()
+    })
   })
 })

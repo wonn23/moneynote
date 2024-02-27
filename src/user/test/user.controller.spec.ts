@@ -26,6 +26,10 @@ describe('UserController', () => {
     controller = module.get<UserController>(UserController)
   })
 
+  it('should be defined', () => {
+    expect(controller).toBeDefined()
+  })
+
   it('회원가입', async () => {
     await controller.signUp(mockUserDto)
 

@@ -9,7 +9,6 @@ describe('AuthController', () => {
 
   const mockAuthService = {
     signIn: jest.fn(),
-    getJwtAccessToken: jest.fn(),
     getNewAccessToken: jest.fn(),
   }
 
@@ -26,6 +25,10 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController)
     authService = module.get<AuthService>(AuthService)
+  })
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined()
   })
 
   it('로그인: AuthService의 signIn을 호출', async () => {
