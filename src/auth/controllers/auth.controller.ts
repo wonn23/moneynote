@@ -23,7 +23,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({
-    summary: '로그인 API',
+    summary: '로그인',
     description: '호출자 로그인 후 토큰을 응답합니다.',
   })
   @ApiResponse({ status: 201, description: 'success' })
