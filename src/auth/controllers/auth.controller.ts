@@ -45,7 +45,7 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
   @UseGuards(AuthGuard('jwt-refresh-token'))
   @Get('/refresh')
-  getRefreshToken(@Request() req): Promise<{ accessToken: string }> {
+  getNewAccessToken(@Request() req): Promise<{ accessToken: string }> {
     return this.authService.getNewAccessToken(req.user)
   }
 }

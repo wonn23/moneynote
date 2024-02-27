@@ -12,7 +12,6 @@ import { DataSource } from 'typeorm'
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(UserRepository)
     private userRepository: UserRepository,
     @InjectDataSource()
     private dataSource: DataSource,
