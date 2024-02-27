@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -16,10 +15,9 @@ import { Repository } from 'typeorm'
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(UserRepository)
     private usersRepository: UserRepository,
     @InjectRepository(Refresh)
-    private refreshRepository: Repository<Refresh>, //custom repository 생성 불필요하다고 판단
+    private refreshRepository: Repository<Refresh>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
   ) {}
@@ -35,11 +33,11 @@ export class AuthService {
       if (!isAuth) throw new UnauthorizedException('비밀번호가 틀렸습니다.')
 
       const payload = { userId: user.id }
+
       const accessToken = await this.getJwtAccessToken(payload)
       const refreshToken = await this.getJwtRefreshToken(payload)
 
-      const salt = await bcrypt.genSalt()
-      const hashedRefreshToken = await bcrypt.hash(refreshToken, salt) // db 유출 문제를 대비해 refresh token을 hash하여 저장
+      const hashedRefreshToken = await bcrypt.hash(refreshToken, 10) // db 유출 문제를 대비해 refresh token을 hash하여 저장
 
       const existingRefreshToken = await this.refreshRepository.findOneBy({
         id: user.id,
@@ -62,18 +60,23 @@ export class AuthService {
 
       return { accessToken, refreshToken }
     } catch (error) {
-      if (error instanceof UnprocessableEntityException) {
-        console.log('Unprocessable Entity Exception:', error.message)
-      } else if (error instanceof UnauthorizedException) {
-        console.log('Unauthorized Exception:', error.message)
-      } else throw new InternalServerErrorException(error)
+      if (
+        error instanceof UnprocessableEntityException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error
+      }
+      console.error('로그인 과정에서 에러 발생:', error)
+      throw new InternalServerErrorException(
+        '로그인 처리 중 에러가 발생했습니다.',
+      )
     }
   }
 
   // access token 생성
   async getJwtAccessToken(payload: object): Promise<string> {
     try {
-      const token = await this.jwtService.sign(payload, {
+      const token = this.jwtService.sign(payload, {
         secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
         expiresIn: Number(
           this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
@@ -89,7 +92,7 @@ export class AuthService {
   // refresh token 생성
   async getJwtRefreshToken(payload: object) {
     try {
-      const token = await this.jwtService.sign(payload, {
+      const token = this.jwtService.sign(payload, {
         secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
         expiresIn: Number(
           this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
