@@ -1,17 +1,7 @@
-import {
-  Controller,
-  Post,
-  Body,
-  ValidationPipe,
-  Get,
-  UseGuards,
-  Request,
-} from '@nestjs/common'
+import { Controller, Post, Body, ValidationPipe } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
-import { AuthGuard } from '@nestjs/passport'
 import { UserService } from '../services/user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
-import { User } from '../entities/user.entity'
 
 @ApiTags('유저')
 @Controller('users')

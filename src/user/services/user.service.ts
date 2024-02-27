@@ -1,14 +1,12 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { User } from '../entities/user.entity'
 import * as bcrypt from 'bcryptjs'
 import { UserRepository } from '../repositories/user.repository'
-import { CreateUserDto } from '../dto/create-user.dto'
 import { DataSource } from 'typeorm'
 
 @Injectable()
@@ -16,6 +14,7 @@ export class UserService {
   constructor(
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
+    @InjectDataSource()
     private dataSource: DataSource,
   ) {}
 
@@ -41,7 +40,7 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     try {
-      const returnedUser = await queryRunner.manager.getRepository(User).save({
+      await queryRunner.manager.getRepository(User).save({
         username,
         password: hashedPassword,
         consultingYn,
@@ -52,7 +51,7 @@ export class UserService {
     } catch (error) {
       console.error(error)
       await queryRunner.rollbackTransaction()
-      throw error
+      throw new InternalServerErrorException('서버에러')
     } finally {
       await queryRunner.release()
     }
