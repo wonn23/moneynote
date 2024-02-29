@@ -210,7 +210,7 @@ export class BudgetService {
       }
 
       budget.amount = updateBudgetDto.amount
-      budget.category = category // 업데이트된 카테고리로 설정
+      budget.category = category
 
       await queryRunner.manager.save(budget)
 

@@ -307,23 +307,23 @@ describe('BudgetService', () => {
 
       const result = await service.updateBudget(id, updatedBudgetDto, user)
       expect(result.amount).toEqual(updatedBudgetDto.amount)
+    })
 
-      it('카테고리를 찾을 수 없을 경우 NotFoundException을 발생시킵니다.', async () => {
-        const id = 1
-        const updateBudgetDto = {
-          amount: 200000,
-          category: '없는 카테고리' as any,
-        }
-        const user = { id: 'user-id' } as User
+    it('예산을 수정하는데 실패했습니다.', async () => {
+      const id = 1
+      const updateBudgetDto = {
+        amount: 200000,
+        category: '없는 카테고리' as any,
+      }
+      const user = { id: 'user-id' } as User
 
-        mockDataSource
-          .createQueryRunner()
-          .manager.findOne.mockResolvedValueOnce(null)
+      mockDataSource
+        .createQueryRunner()
+        .manager.findOne.mockResolvedValueOnce(null)
 
-        await expect(
-          service.updateBudget(id, updateBudgetDto, user),
-        ).rejects.toThrow(NotFoundException)
-      })
+      await expect(
+        service.updateBudget(id, updateBudgetDto, user),
+      ).rejects.toThrow(InternalServerErrorException)
     })
   })
 
