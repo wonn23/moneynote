@@ -1,11 +1,4 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsString,
-  Matches,
-  Min,
-} from 'class-validator'
+import { IsEnum, IsInt, Min } from 'class-validator'
 import { categoryEnum } from '../types/budget.enum'
 
 export class CreateBudgetDto {

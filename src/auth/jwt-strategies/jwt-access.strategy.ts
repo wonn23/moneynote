@@ -17,7 +17,7 @@ export class JwtAccessTokenStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: Payload) {
     const { userId } = payload
-    console.log(userId)
+
     if (userId) {
       return userId
     } else {

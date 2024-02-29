@@ -19,6 +19,7 @@ import { Budget } from '../entities/budget.entity'
 import { BudgetRecommendationDto } from '../dto/budget-recommendation.dto'
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -29,10 +30,10 @@ import { User } from 'src/user/entities/user.entity'
 
 @ApiTags('예산 설정')
 @ApiBearerAuth()
-// @UseGuards(AuthGuard())
+@UseGuards(AuthGuard())
 @Controller('budgets')
 export class BudgetController {
-  constructor(private readonly budgetService: BudgetService) {}
+  constructor(private budgetService: BudgetService) {}
 
   @ApiOperation({
     summary: '예산 설정',
@@ -44,7 +45,6 @@ export class BudgetController {
     type: CreateBudgetDto,
   })
   @Post()
-  // 예산 설정
   async create(
     @Body() createBudgetDto: CreateBudgetDto,
     @GetUser() user: User,
@@ -62,15 +62,17 @@ export class BudgetController {
     description: '예산 총금액',
     example: 1000000,
   })
-  @ApiResponse({
-    status: 201,
+  @ApiCreatedResponse({
     description: '성공',
     type: Object,
   })
   @Post('/design')
-  // 예산 설계 추천
-  async design(@Body('totalAmount') totalAmount: number): Promise<object[]> {
-    return this.budgetService.getUserAverageRatio(totalAmount)
+  async design(
+    @Body('totalAmount') totalAmount: number,
+    @Body('year') year: number,
+    @Body('month') month: number,
+  ) {
+    return this.budgetService.designBudget(totalAmount, year, month)
   }
 
   @Get()
@@ -99,7 +101,7 @@ export class BudgetController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<void> {
+  async delete(@Param('id') id: string): Promise<void> {
     await this.budgetService.deleteBudget(+id)
   }
 }
