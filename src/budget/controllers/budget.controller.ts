@@ -7,16 +7,14 @@ import {
   UseGuards,
   Delete,
   Query,
-  UsePipes,
   Put,
+  ParseIntPipe,
 } from '@nestjs/common'
 import { BudgetService } from '../services/budget.service'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { AuthGuard } from '@nestjs/passport'
-import { getBudgetValidationPipe } from '../pipes/get-budget.pipe'
 import { Budget } from '../entities/budget.entity'
-import { BudgetRecommendationDto } from '../dto/budget-recommendation.dto'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -75,29 +73,32 @@ export class BudgetController {
     return this.budgetService.designBudget(totalAmount, year, month)
   }
 
-  @Get()
+  @Get('/year')
   // 예산 조회 연도별
-  @UsePipes(new getBudgetValidationPipe())
-  async findBudgetByYear(@Query('year') year: number): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYear(year)
+  async findBudgetByYear(
+    @Query('year', ParseIntPipe) year: number,
+    @GetUser() user: User,
+  ): Promise<Budget[]> {
+    return this.budgetService.findBudgetByYear(year, user)
   }
 
-  @Get()
+  @Get('/year-and-month')
   // 예산 조회 연월별
-  @UsePipes(new getBudgetValidationPipe())
   async findBudgetByYearAndMonth(
-    @Query('year') year: number,
-    @Query('month') month: number,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('month', ParseIntPipe) month: number,
+    @GetUser() user: User,
   ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYearAndMonth(year, month)
+    return this.budgetService.findBudgetByYearAndMonth(year, month, user)
   }
 
   @Put(':id')
   async update(
     @Param('id') id: string,
     @Body() updateBudgetDto: UpdateBudgetDto,
+    @GetUser() userId: User,
   ): Promise<Budget> {
-    return this.budgetService.updateBudget(+id, updateBudgetDto)
+    return this.budgetService.updateBudget(+id, updateBudgetDto, userId)
   }
 
   @Delete(':id')
