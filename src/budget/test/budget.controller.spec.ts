@@ -29,6 +29,7 @@ describe('BudgetController', () => {
   beforeEach(async () => {
     const mockBudgetService = {
       createBudget: jest.fn(),
+      designBudget: jest.fn(),
       getUserAverageRatio: jest.fn(),
       findBudgetByYear: jest.fn(),
       findBudgetByYearAndMonth: jest.fn(),
@@ -52,12 +53,8 @@ describe('BudgetController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined()
-  })
-
-  it('should be defined', () => {
     expect(service).toBeDefined()
   })
-
   describe('create', () => {
     it('예산 생성 성공', async () => {
       const createBudgetDto: CreateBudgetDto = {
