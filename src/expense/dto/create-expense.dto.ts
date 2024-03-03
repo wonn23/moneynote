@@ -1,10 +1,5 @@
-import {
-  IsBoolean,
-  IsDate,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator'
+import { IsBoolean, IsEnum, IsNumber, IsString } from 'class-validator'
+import { categoryEnum } from 'src/budget/types/budget.enum'
 
 export class CreateExpenseDto {
   @IsNumber()
@@ -13,9 +8,9 @@ export class CreateExpenseDto {
   @IsString()
   memo?: string
 
-  @IsString()
-  content: string
-
   @IsBoolean()
   isExcluded: boolean
+
+  @IsEnum(categoryEnum)
+  category: categoryEnum
 }

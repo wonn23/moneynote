@@ -14,7 +14,6 @@ import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
 import { AuthGuard } from '@nestjs/passport'
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
-import { User } from 'src/user/entities/user.entity'
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -38,9 +37,9 @@ export class ExpenseController {
   @Post()
   async create(
     @Body() createExpenseDto: CreateExpenseDto,
-    @GetUser() user: User,
+    @GetUser() userId: string,
   ): Promise<Expense> {
-    return this.expenseService.createExpense(createExpenseDto, user)
+    return this.expenseService.createExpense(createExpenseDto, userId)
   }
 
   @ApiOperation({
@@ -52,8 +51,8 @@ export class ExpenseController {
     description: '성공',
   })
   @Get()
-  async findAll(@GetUser() user: User): Promise<Expense[]> {
-    return this.expenseService.getAllExpense(user)
+  async getAllExpense(@GetUser() userId: string): Promise<Expense[]> {
+    return this.expenseService.getAllExpense(userId)
   }
 
   @ApiOperation({
@@ -65,11 +64,11 @@ export class ExpenseController {
     description: '성공',
   })
   @Get(':id')
-  async findOne(
-    @Param('id') id: string,
-    @GetUser() user: User,
+  async getOneExpense(
+    @Param('id') expenseId: string,
+    @GetUser() userId: string,
   ): Promise<Expense> {
-    return this.expenseService.getOneExpense(+id, user)
+    return this.expenseService.getOneExpense(+expenseId, userId)
   }
 
   @ApiOperation({ summary: '지출 수정', description: '유저의 지출 기록 수정' })
@@ -79,11 +78,15 @@ export class ExpenseController {
   })
   @Put(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id') expenseId: string,
     @Body() updateExpenseDto: UpdateExpenseDto,
-    @GetUser() user: User,
+    @GetUser() userId: string,
   ): Promise<Expense> {
-    return this.expenseService.updateExpense(+id, updateExpenseDto, user)
+    return this.expenseService.updateExpense(
+      +expenseId,
+      updateExpenseDto,
+      userId,
+    )
   }
 
   @ApiOperation({ summary: '지출 삭제', description: '유저의 지출 기록 삭제' })
@@ -92,7 +95,30 @@ export class ExpenseController {
     description: '성공',
   })
   @Delete(':id')
-  async remove(@Param('id') id: string, @GetUser() user: User): Promise<void> {
-    this.expenseService.deleteExpense(+id, user)
+  async delete(
+    @Param('id') expenseId: string,
+    @GetUser() userId: string,
+  ): Promise<void> {
+    this.expenseService.deleteExpense(+expenseId, userId)
+  }
+
+  @Get('recommend')
+  async recommendExpense(@GetUser() userId: string) {
+    return await this.expenseService.recommendExpense(userId)
+  }
+
+  @Get('guide')
+  async guideExpense(@GetUser() userId: string) {
+    return await this.expenseService.guideExpense(userId)
+  }
+
+  @Get('statistics/monthly')
+  async compareRatioToLastMonth(@GetUser() userId: string) {
+    return await this.expenseService.compareRatioToLastMonth(userId)
+  }
+
+  @Get('statistics/weekly')
+  async compareRatioToLastWeek(@GetUser() userId: string) {
+    return await this.expenseService.compareRatioToLastWeek(userId)
   }
 }
