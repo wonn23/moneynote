@@ -3,7 +3,6 @@ import { UserService } from '../services/user.service'
 import { DataSource } from 'typeorm'
 import { UserRepository } from '../repositories/user.repository'
 import { ForbiddenException } from '@nestjs/common'
-import * as bcrypt from 'bcrypt'
 import { User } from '../entities/user.entity'
 
 jest.mock('bcrypt', () => ({

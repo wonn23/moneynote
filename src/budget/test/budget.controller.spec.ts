@@ -26,17 +26,17 @@ describe('BudgetController', () => {
     discordUrl: 'http://example.com',
   }
 
-  beforeEach(async () => {
-    const mockBudgetService = {
-      createBudget: jest.fn(),
-      designBudget: jest.fn(),
-      getUserAverageRatio: jest.fn(),
-      findBudgetByYear: jest.fn(),
-      findBudgetByYearAndMonth: jest.fn(),
-      updateBudget: jest.fn(),
-      deleteBudget: jest.fn(),
-    }
+  const mockBudgetService = {
+    createBudget: jest.fn(),
+    designBudget: jest.fn(),
+    getUserAverageRatio: jest.fn(),
+    findBudgetByYear: jest.fn(),
+    findBudgetByYearAndMonth: jest.fn(),
+    updateBudget: jest.fn(),
+    deleteBudget: jest.fn(),
+  }
 
+  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BudgetController],
       providers: [
@@ -55,6 +55,7 @@ describe('BudgetController', () => {
     expect(controller).toBeDefined()
     expect(service).toBeDefined()
   })
+
   describe('create', () => {
     it('예산 생성 성공', async () => {
       const createBudgetDto: CreateBudgetDto = {

@@ -5,6 +5,7 @@ import {
   JoinColumn,
   OneToMany,
   OneToOne,
+  PrimaryColumn,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm'
@@ -14,7 +15,7 @@ import { Budget } from 'src/budget/entities/budget.entity'
 @Entity('users')
 @Unique(['username'])
 export class User extends BaseEntity {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: string
 
   @Column({ length: 20 })

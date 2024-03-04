@@ -102,12 +102,12 @@ export class ExpenseController {
     this.expenseService.deleteExpense(+expenseId, userId)
   }
 
-  @Get('recommend')
+  @Get('alarm/recommend')
   async recommendExpense(@GetUser() userId: string) {
     return await this.expenseService.recommendExpense(userId)
   }
 
-  @Get('guide')
+  @Get('alarm/guide')
   async guideExpense(@GetUser() userId: string) {
     return await this.expenseService.guideExpense(userId)
   }

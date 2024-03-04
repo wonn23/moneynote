@@ -1,6 +1,5 @@
 import { Repository } from 'typeorm'
 import { CustomRepository } from '../../common/typeorm-ex.decorator'
-import { CreateUserDto } from '../dto/create-user.dto'
 import { User } from '../entities/user.entity'
 
 @CustomRepository(User)
