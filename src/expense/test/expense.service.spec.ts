@@ -10,6 +10,7 @@ import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { NotFoundException } from '@nestjs/common'
 import { User } from 'src/user/entities/user.entity'
+import { UpdateBudgetDto } from 'src/budget/dto/update-budget.dto'
 
 const mockUserRepository = {
   findOne: jest.fn(),
@@ -123,7 +124,7 @@ describe('ExpenseService', () => {
         amount: 10000,
         memo: 'Test expense',
         isExcluded: false,
-        category: '식사' as any,
+        category: categoryEnum.food,
       }
       jest.spyOn(userRepository, 'findOne').mockResolvedValueOnce(null)
 
@@ -137,7 +138,7 @@ describe('ExpenseService', () => {
         amount: 10000,
         memo: 'Test expense',
         isExcluded: false,
-        category: '식사' as any,
+        category: categoryEnum.food,
       }
       jest
         .spyOn(userRepository, 'findOne')
@@ -215,7 +216,57 @@ describe('ExpenseService', () => {
     })
   })
 
-  describe('updateExpense', () => {})
+  describe('updateExpense', () => {
+    it('지출 수정에 성공했습니다.', async () => {
+      const expenseId = 1
+      const updateExpenseDto: UpdateBudgetDto = {
+        amount: 3000,
+        memo: '저녁 식사',
+        isExcluded: false,
+        category: categoryEnum.food,
+      }
+      const userId = 'userId'
+      const mockExpense = {
+        id: 2,
+        amount: 5000,
+        memo: '점심 식사',
+        spentDate: '2024-03-01T15:00:00.000Z',
+        isExcluded: false,
+        createdAt: '2024-03-03T17:21:09.992Z',
+        updatedAt: '2024-03-06T11:20:10.545Z',
+        deletedAt: null,
+        category: {
+          id: 2,
+          name: '식사',
+        },
+      }
+
+      mockUserRepository.findOne.mockResolvedValue({ id: userId })
+      mockCategoryRepository.findOne.mockResolvedValue({
+        name: updateExpenseDto.category,
+      })
+      mockExpenseRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockExpense),
+      })
+
+      Object.assign(mockExpense, updateExpenseDto)
+
+      mockExpenseRepository.save.mockResolvedValue(mockExpense)
+
+      const result = await service.updateExpense(
+        expenseId,
+        updateExpenseDto,
+        userId,
+      )
+
+      expect(result).toEqual(mockExpense)
+      expect(expenseRepository.save).toHaveBeenCalledWith(mockExpense)
+    })
+  })
 
   describe('deleteExpense', () => {
     it('지출 삭제에 성공했습니다.', async () => {
