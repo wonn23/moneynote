@@ -6,7 +6,6 @@ import {
   Param,
   UseGuards,
   Delete,
-  Query,
   Put,
   ParseIntPipe,
 } from '@nestjs/common'
@@ -73,20 +72,20 @@ export class BudgetController {
     return this.budgetService.designBudget(totalAmount, year, month)
   }
 
-  @Get('/year')
+  @Get('/year/:year')
   // 예산 조회 연도별
   async findBudgetByYear(
-    @Query('year', ParseIntPipe) year: number,
+    @Param('year', ParseIntPipe) year: number,
     @GetUser() user: User,
   ): Promise<Budget[]> {
     return this.budgetService.findBudgetByYear(year, user)
   }
 
-  @Get('/year-and-month')
+  @Get('/year/:year/month/:month')
   // 예산 조회 연월별
   async findBudgetByYearAndMonth(
-    @Query('year', ParseIntPipe) year: number,
-    @Query('month', ParseIntPipe) month: number,
+    @Param('year', ParseIntPipe) year: number,
+    @Param('month', ParseIntPipe) month: number,
     @GetUser() user: User,
   ): Promise<Budget[]> {
     return this.budgetService.findBudgetByYearAndMonth(year, month, user)
