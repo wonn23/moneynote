@@ -69,6 +69,10 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService)
   })
 
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it('should define UserService', () => {
     expect(service).toBeDefined()
   })
@@ -135,10 +139,6 @@ describe('AuthService', () => {
         payload,
         expect.anything(),
       )
-    })
-
-    afterEach(() => {
-      jest.restoreAllMocks()
     })
   })
 })

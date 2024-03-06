@@ -75,6 +75,10 @@ describe('UserService', () => {
     dataSource = module.get<DataSource>(DataSource)
   })
 
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
   it('should be defined', () => {
     expect(service).toBeDefined()
   })
@@ -113,10 +117,6 @@ describe('UserService', () => {
       await expect(
         service.signUp('wonn22', '1q2w3e4r5t!', true),
       ).rejects.toThrowError(ForbiddenException)
-    })
-
-    afterEach(() => {
-      jest.clearAllMocks()
     })
   })
 })
