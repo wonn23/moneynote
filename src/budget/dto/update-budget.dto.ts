@@ -7,12 +7,6 @@ export class UpdateBudgetDto extends PartialType(CreateBudgetDto) {
   @IsInt()
   amount: number
 
-  @IsString()
-  memo: string
-
-  @IsBoolean()
-  isExcluded: boolean
-
   @IsEnum(categoryEnum)
   category: categoryEnum
 }

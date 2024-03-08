@@ -109,7 +109,7 @@ describe('ExpenseController', () => {
 
   describe('getOneExpense', () => {
     it('지출 상세 조회에 성공했습니다.', async () => {
-      const expenseId = '1'
+      const expenseId = 1
       const userId = 'userId'
       const result = new Expense()
       jest.spyOn(service, 'getOneExpense').mockResolvedValue(result)
@@ -137,7 +137,7 @@ describe('ExpenseController', () => {
     it('지출 삭제에 성공했습니다.', async () => {
       jest.spyOn(service, 'deleteExpense').mockResolvedValue(undefined)
 
-      await expect(controller.delete('1', 'userId')).resolves.toBeUndefined()
+      await expect(controller.delete(1, 'userId')).resolves.toBeUndefined()
     })
   })
   describe('recommendExpense', () => {

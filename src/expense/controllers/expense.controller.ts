@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common'
 import { ExpenseService } from '../services/expense.service'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
@@ -65,10 +66,10 @@ export class ExpenseController {
   })
   @Get(':id')
   async getOneExpense(
-    @Param('id') expenseId: string,
+    @Param('id', ParseIntPipe) expenseId: number,
     @GetUser() userId: string,
   ): Promise<Expense> {
-    return this.expenseService.getOneExpense(+expenseId, userId)
+    return this.expenseService.getOneExpense(expenseId, userId)
   }
 
   @ApiOperation({ summary: '지출 수정', description: '유저의 지출 기록 수정' })
@@ -96,10 +97,10 @@ export class ExpenseController {
   })
   @Delete(':id')
   async delete(
-    @Param('id') expenseId: string,
+    @Param('id', ParseIntPipe) expenseId: number,
     @GetUser() userId: string,
   ): Promise<void> {
-    this.expenseService.deleteExpense(+expenseId, userId)
+    await this.expenseService.deleteExpense(expenseId, userId)
   }
 
   @Get('alarm/recommend')

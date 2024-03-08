@@ -10,7 +10,7 @@ import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { NotFoundException } from '@nestjs/common'
 import { User } from 'src/user/entities/user.entity'
-import { UpdateBudgetDto } from 'src/budget/dto/update-budget.dto'
+import { UpdateExpenseDto } from '../dto/update-expense.dto'
 
 const mockUserRepository = {
   findOne: jest.fn(),
@@ -219,7 +219,7 @@ describe('ExpenseService', () => {
   describe('updateExpense', () => {
     it('지출 수정에 성공했습니다.', async () => {
       const expenseId = 1
-      const updateExpenseDto: UpdateBudgetDto = {
+      const updateExpenseDto: UpdateExpenseDto = {
         amount: 3000,
         memo: '저녁 식사',
         isExcluded: false,
