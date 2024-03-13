@@ -115,7 +115,7 @@ describe('ExpenseController', () => {
       jest.spyOn(service, 'getOneExpense').mockResolvedValue(result)
 
       expect(await controller.getOneExpense(expenseId, userId)).toBe(result)
-      expect(service.getOneExpense).toHaveBeenCalledWith(+expenseId, userId)
+      expect(service.getOneExpense).toHaveBeenCalledWith(expenseId, userId)
     })
   })
 

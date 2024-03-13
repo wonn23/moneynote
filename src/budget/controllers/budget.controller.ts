@@ -25,7 +25,7 @@ import {
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
 import { User } from 'src/user/entities/user.entity'
 
-@ApiTags('예산 설정')
+@ApiTags('예산')
 @ApiBearerAuth()
 @UseGuards(AuthGuard())
 @Controller('budgets')

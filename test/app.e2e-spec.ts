@@ -262,24 +262,66 @@ describe('AppController (e2e)', () => {
         .get(`/expense/alarm/recommend`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
+
+      expect(response.body).toHaveProperty('totalDailyBudget')
+      expect(response.body).toHaveProperty(
+        'todayRecommendedExpenseByCategoryExcludingTotal',
+      )
+      expect(
+        Array.isArray(
+          response.body.todayRecommendedExpenseByCategoryExcludingTotal,
+        ),
+      ).toBeTruthy()
+      expect(response.body).toHaveProperty('message')
+      expect(typeof response.body.message).toBe('string')
+
+      response.body.todayRecommendedExpenseByCategoryExcludingTotal.forEach(
+        (item) => {
+          expect(typeof item.categoryId).toBe('number')
+          expect(item).toHaveProperty('todaysRecommendedExpenditureAmount')
+          expect(typeof item.todaysRecommendedExpenditureAmount).toBe('number')
+        },
+      )
     })
     it('/expense/alarm/guide : (GET) : 오늘의 지출 안내', async () => {
       const response = await request(app.getHttpServer())
         .get(`/expense/alarm/guide`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
+
+      expect(Array.isArray(response.body)).toBeTruthy()
+      response.body.forEach((item) => {
+        expect(item).toHaveProperty('categoryId')
+        expect(item).toHaveProperty('ratio')
+      })
     })
     it('/expense/statistics/monthly : (GET) : 지난달과 소비율 비교', async () => {
       const response = await request(app.getHttpServer())
         .get(`/expense/statistics/monthly`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
+
+      expect(Array.isArray(response.body)).toBeTruthy()
+      response.body.forEach((item) => {
+        expect(item).toHaveProperty('categoryId')
+        expect(item).toHaveProperty('lastMonthAmount')
+        expect(item).toHaveProperty('thisMonthAmount')
+        expect(item).toHaveProperty('ratio')
+      })
     })
     it('/expense/statistics/weekly : (GET) : 지난주와 소비율 비교', async () => {
       const response = await request(app.getHttpServer())
         .get(`/expense/statistics/weekly`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
+
+      expect(Array.isArray(response.body)).toBeTruthy()
+      response.body.forEach((item) => {
+        expect(item).toHaveProperty('categoryId')
+        expect(item).toHaveProperty('lastWeekAmount')
+        expect(item).toHaveProperty('thisWeekAmount')
+        expect(item).toHaveProperty('ratio')
+      })
     })
   })
 

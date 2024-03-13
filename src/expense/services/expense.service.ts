@@ -171,7 +171,7 @@ export class ExpenseService {
         .select('SUM(expense.amount)', 'amount')
         .where('expense.user_id = :userId', { userId })
         .andWhere('expense.spent_date >= :firstOfTheMonth', { firstOfTheMonth })
-        .andWhere('expense.spent_date < :today', { today: today.toISOString() })
+        .andWhere('expense.spent_date < :today', { today })
         .groupBy('expense.category_id')
         .getRawOne()
 
@@ -233,8 +233,6 @@ export class ExpenseService {
   }
 
   async guideExpense(userId: string) {
-    const categoryExpense = []
-
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -245,46 +243,48 @@ export class ExpenseService {
     const todayRecommendedExpenseByCategory =
       todaysIdealSpendingAmount.todayRecommendedExpenseByCategoryExcludingTotal
 
-    const enumLength = Object.keys(categoryEnum).length
-
-    // 오늘 기준 연도, 월에 대한 카테고리별 예산
-    for (
-      let i = 2;
-      i <= Math.min(enumLength, todayRecommendedExpenseByCategory.length);
-      i++
-    ) {
-      const categoryId = i
-      const todaysSpentAmount = this.expenseRepository
-        .createQueryBuilder('expense')
-        .select('SUM(expense.amount)', 'amount')
-        .where('expense.spent_date = :today', { today })
-        .andWhere('expense.category_id = :categoryId', { categoryId })
-        .groupBy('expense.category_id')
-        .getRawOne()
-
-      if (!todaysIdealSpendingAmount) {
-        continue
-      }
-
-      const totalTodaysSpentAmount = categoryExpense.reduce(
-        (acc, cur) => acc + cur.todaysRecommendedExpenditureAmount,
-        0,
-      )
-      const recommendedAmount =
-        todayRecommendedExpenseByCategory[i - 2]
-          ?.todaysRecommendedExpenditureAmount || 0
-      const degreeOfDanger = Math.round(
-        (recommendedAmount / totalTodaysSpentAmount) * 100,
-      ).toFixed(0)
-
-      categoryExpense.push({
-        categoryId,
-        todaysSpentAmount,
-        degreeOfDanger,
+    // 오늘 기준 연도, 월에 대한 카테고리별 지출 액수 조회
+    const todaysSpentAmount = await this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('expense.category_id', 'categoryId')
+      .addSelect('SUM(expense.amount)', 'totalAmount')
+      .innerJoin('expense.category', 'category')
+      .where('expense.spent_date >= :today', { today })
+      .andWhere('expense.spent_date < :tomorrow', {
+        tomorrow,
       })
+      .andWhere('expense.user_id = :userId', { userId })
+      .groupBy('expense.category_id')
+      .getRawMany()
+
+    // 비율 계산
+    const calculateExpenseRatio = (recommendedExpenses, actualExpenses) => {
+      return recommendedExpenses.reduce((acc, recommendedExpense) => {
+        const actualExpense = actualExpenses.find(
+          (expense) => expense.categoryId === recommendedExpense.categoryId,
+        )
+
+        if (actualExpense) {
+          const ratio =
+            (parseInt(actualExpense.totalAmount) /
+              recommendedExpense.todaysRecommendedExpenditureAmount) *
+            100
+          acc.push({
+            categoryId: recommendedExpense.categoryId,
+            ratio: `${ratio.toFixed(2)}%`,
+          })
+        }
+
+        return acc
+      }, [])
     }
 
-    return categoryExpense
+    const expenseRatios = calculateExpenseRatio(
+      todayRecommendedExpenseByCategory,
+      todaysSpentAmount,
+    )
+
+    return expenseRatios
   }
 
   async compareRatioToLastMonth(userId: string) {

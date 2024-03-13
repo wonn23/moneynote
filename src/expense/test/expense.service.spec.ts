@@ -301,12 +301,8 @@ describe('ExpenseService', () => {
     it('오늘의 지출 추천 계산에 성공했습니다.', async () => {
       const userId = 'userId'
       const categoryId = 1
-      const today = new Date()
       const budgetAmount = 30000
       const spentAmount = 15000
-      const remainingDays =
-        new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() -
-        today.getDate()
       const mockBudget = {
         categoryId,
         amount: budgetAmount,
@@ -318,7 +314,7 @@ describe('ExpenseService', () => {
       mockBudgetRepository.createQueryBuilder.mockReturnValue({
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockExpense),
+        getOne: jest.fn().mockResolvedValue(mockBudget),
       })
 
       mockExpenseRepository.createQueryBuilder.mockReturnValue({
@@ -344,35 +340,88 @@ describe('ExpenseService', () => {
   describe('guideExpense', () => {
     it('오늘의 지출 안내 계산에 성공했습니다.', async () => {
       const userId = 'userId'
-      jest.spyOn(service, 'recommendExpense').mockResolvedValue({
-        totalDailyBudget: 5000,
-        todayRecommendedExpenseByCategoryExcludingTotal: [
-          { categoryId: 1, todaysRecommendedExpenditureAmount: 2000 },
-          { categoryId: 2, todaysRecommendedExpenditureAmount: 3000 },
-        ],
-        message: '합리적으로 소비하고 있네요 좋습니다.',
-      })
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
 
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
+      const mockRecommendedExpense = {
+        totalDailyBudget: 86263,
+        todayRecommendedExpenseByCategoryExcludingTotal: [
+          {
+            categoryId: 2,
+            todaysRecommendedExpenditureAmount: 36000,
+          },
+          {
+            categoryId: 3,
+            todaysRecommendedExpenditureAmount: 4421,
+          },
+          {
+            categoryId: 4,
+            todaysRecommendedExpenditureAmount: 36000,
+          },
+          {
+            categoryId: 5,
+            todaysRecommendedExpenditureAmount: 4421,
+          },
+          {
+            categoryId: 6,
+            todaysRecommendedExpenditureAmount: 4421,
+          },
+          {
+            categoryId: 7,
+            todaysRecommendedExpenditureAmount: 1000,
+          },
+        ],
+        message: '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!',
+      }
+
+      jest
+        .spyOn(service, 'recommendExpense')
+        .mockResolvedValue(mockRecommendedExpense)
+
+      mockExpenseRepository.createQueryBuilder.mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
-        getRawOne: jest
-          .fn()
-          .mockResolvedValueOnce({ amount: 1500 })
-          .mockResolvedValue({ amount: 2500 }),
-      })
+        getRawMany: jest.fn().mockResolvedValue([
+          { categoryId: 2, totalAmount: '16000' },
+          { categoryId: 3, totalAmount: '3000' },
+          { categoryId: 4, totalAmount: '50000' },
+          { categoryId: 5, totalAmount: '30000' },
+          { categoryId: 6, totalAmount: '3000' },
+        ]),
+      }))
 
       const expected = [
-        { categoryId: 1, todaysSpentAmount: 1500, degreeOfDanger: '75' },
-        { categoryId: 2, todaysSpentAmount: 2500, degreeOfDanger: '83' },
+        {
+          categoryId: 2,
+          ratio: '44.44%',
+        },
+        {
+          categoryId: 3,
+          ratio: '67.86%',
+        },
+        {
+          categoryId: 4,
+          ratio: '138.89%',
+        },
+        {
+          categoryId: 5,
+          ratio: '678.58%',
+        },
+        {
+          categoryId: 6,
+          ratio: '67.86%',
+        },
       ]
 
-      const result = await service.guideExpense(userId)
+      const results = await service.guideExpense(userId)
 
-      expect(result).toEqual(expected)
+      expect(results).toEqual(expected)
     })
   })
 
