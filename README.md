@@ -1,4 +1,4 @@
-<div style="text-align: center;">
+<div align="center">
   <img src="./public/logo.webp" alt="logo" width="60%" />
 </div>
 
@@ -38,7 +38,7 @@
 
 언어 및 사용 도구 <br/> ![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&logo=nestjs&logoColor=white) ![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white) ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens) ![Swagger](https://img.shields.io/badge/swagger-%ffffff.svg?style=for-the-badge&logo=swagger&logoColor=white)
 <br/>
-데이터 베이스 <br/> ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)<br/>
+데이터 베이스 <br/> ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
 </div>
 
@@ -87,12 +87,10 @@
 
   1. 설정한 월별 예산을 만족하기 위해 오늘 지출 가능한 금액을 총액 과 카테고리 별 금액 으로 제공합니다.
   2. 지속적인 소비 습관을 위해 매일 아침 6시 webhook 알림을 보냅니다.
-     <img src="./public/webhook.png" alt="logo" width="60%" />
 
 - **오늘의 지출금액 통계**
   1. 오늘 지출한 내용을 사용량(%)과 카테고리 별 지출상태를 알려줍니다.
   2. 지속적인 소비 습관을 위해 매일 오후 9시 webhook 알림을 보냅니다.
-     <img src="./public/info.png" alt="logo" width="60%" />
 
 <br/>
 
@@ -106,6 +104,8 @@
 unit test는 모든 실행 경로를 검토하여 성공하는 시나리오가 포함되도록 하였습니다.
 현재 예상되는 실패 시나리오에 대한 케이스를 체계적으로 추가하고 있으며, 이를 통해 에러 처리 능력을 향상하고자 합니다.
 
+<img src="./public/unittest.png" alt="logo" width="80%" />
+
 ### e2e testing
 
 `app.e2e-spec.ts` 파일은 모든 API 응답에 대한 포괄적인 테스트를 포함하고 있습니다.
@@ -118,7 +118,9 @@ unit test는 모든 실행 경로를 검토하여 성공하는 시나리오가 �
 
 ## Directory
 
-Nestjs의 특징을 살려 주요 기능들을 모듈화하여 분리하였습니다. API 기준 메인 기능들 위주로 분리하였고 각 모듈들 안에 Module, Controller, Service을 합쳐모듈 이름으로만 명시해놨습니다. 기능들 위주로 구조화한 이유는 추후 유지보수 측면에서 관리가 용이할 것이라고 판단하였고 DB의 쿼리문이 까다로운 모듈에서 Repository를 분리하였습니다. 유지보수를 하면서 Repository 패턴이 필요하다고 생각되는 모듈들을 리팩토링하여 분리할 계획입니다.
+Nestjs의 특징을 살려 주요 기능별로 모듈(auth, budget, expense, user 등)이 나누어져 있습니다. 이는 애플리케이션의 기능을 독립적으로 관리하고 재사용성을 높이는 데 기여합니다. 또, common 디렉토리에 미들 웨어, 예외 필터, 인터셉터 등 애플리케이션 전반에 재사용될 수 있는 요소들을 모아두었습니다.
+레이어드 아키텍처는 controllers, services, repository 등을 포함하여 MVC 패턴을 따랐습니다. 이는 코드의 역할을 분리하여 유지보수성과 확장성을 향상시킵니다. entities와 repositroies 디렉토리를 두어 데이터 액세스 레이어를 두었습니다. 복잡한 쿼리문은 repositories로 옮기는 작업을 할 예정입니다.
+각 기능별로 test 디렉토리를 두어 BDD 방식으로 unit test를 진행했습니다. 이는 애플리케이션의 안전성을 높이는 데 기여합니다.
 
 <summary> 파일 구조 보기 </summary>
 
@@ -152,7 +154,6 @@ src
 │   ├── controllers
 │   ├── dto
 │   ├── entities
-│   ├── expense.module.ts
 │   ├── pipes
 │   ├── repositories
 │   ├── services
@@ -188,7 +189,7 @@ Swagger : http://localhost:{port}/swagger#/
 
 ## 프로젝트 진행 및 이슈 관리
 
-[프로젝트 관리 페이지](https://dev-j.notion.site/Assets-8fff434d662c4ed9b09fe4f49b46209b?pvs=4)
+[프로젝트 관리 페이지](https://dev-j.notion.site/MoneyNote-e63f8e6a1ee04e7ab5e6edefd9df6021?pvs=4)
 
 <img src="./public/timeline.png" alt="logo" width="80%" />
 
