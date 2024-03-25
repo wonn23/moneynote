@@ -183,14 +183,6 @@ Swagger : http://localhost:{port}/swagger#/
 ## ERD
 
 <img src="./public/erd.png" alt="logo" width="80%" />
-<br/>
-
-## TIL 및 회고
-
-- [save? upsert? ](https://www.notion.so/dev-j/save-upsert-2-e283914f0e9c42c6954a8a01eb4cc7bc?pvs=4)
-- [Redis의 세계로](https://www.notion.so/dev-j/Redis-3f4f1fad446343178fb15091af309baa?pvs=4)
-- [인증 및 인가](https://dev2-jay.tistory.com/54)
-- [planToClass](https://dev-j.notion.site/planToClass-5a2c83f10768430295ed5bef885c0a88?pvs=4)
 
 <br/>
 
