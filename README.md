@@ -13,11 +13,10 @@
 
 - [개요](#개요)
 - [구현과정(설계 및 의도)](<#구현과정(설계-및-의도)>)
-- [TEST 전략](#TEST-전략)
 - [Directory](#directory)
+- [TEST 전략](#TEST-전략)
 - [API Reference](#api-reference)
 - [ERD](#ERD)
-- [프로젝트 진행 및 이슈 관리](#프로젝트-진행-및-이슈-관리)
 - [TIL 및 회고](#til-및-회고)
 - [Authors](#authors)
 
@@ -58,7 +57,6 @@
 - **로그인**
   1. 계정, 비밀번호로 로그인 시 JWT토큰이 발급됩니다.
   2. JWT 토큰은 `Access token`과 `Refresh token` 두개가 발급됩니다.
-  - 이 떄 Refresh token은 `redis store`에 저장됩니다.
   3. 이후 게시물, 통계 API 요청 Header에 Access token가 항시 포함되며, JWT 유효성을 검증합니다.
   4. Aaccess token 만료시 Refresh token을 포함하여 재발급 요청시 Refresh 유효성 검증 후 Access토큰을 재발급합니다.
 
@@ -66,7 +64,7 @@
 
 - **카테고리 금액 설정**
 
-  1.  총 18가지의 카테고리 항목에 대한 예산금액 설정을 할 수 있습니다.
+  1.  총 7가지의 카테고리 항목에 대한 예산금액 설정을 할 수 있습니다.
   2.  유저가 카테고리 별 예산 금액 설정을 할 수 있도록 모든 카테고리 목록을 반환합니다.
 
 - **예산 금액 추천**
@@ -91,28 +89,6 @@
 - **오늘의 지출금액 통계**
   1. 오늘 지출한 내용을 사용량(%)과 카테고리 별 지출상태를 알려줍니다.
   2. 지속적인 소비 습관을 위해 매일 오후 9시 webhook 알림을 보냅니다.
-
-<br/>
-
-## TEST 전략
-
-코드베이스의 높은 품질과 견고성을 유지하기 위해, 행동 주도 개발(BDD) 테스트 방법론을 채택했습니다. 테스트 전략은 애플리케이션의 모든 측면이 검증될 수 있도록 세심하게 구성되었습니다.
-
-### unit testing
-
-각 모듈 내에 테스트 디렉토리를 구축하여 `Controller`와 `Service` 계층이 전용 unit test를 가지도록 했습니다.
-unit test는 모든 실행 경로를 검토하여 성공하는 시나리오가 포함되도록 하였습니다.
-현재 예상되는 실패 시나리오에 대한 케이스를 체계적으로 추가하고 있으며, 이를 통해 에러 처리 능력을 향상하고자 합니다.
-
-<img src="./public/unittest.png" alt="logo" width="80%" />
-
-### e2e testing
-
-`app.e2e-spec.ts` 파일은 모든 API 응답에 대한 포괄적인 테스트를 포함하고 있습니다.
-성공적인 응답과 실패한 응답에 사례를 모두에 균형적인 초점을 맞추어 테스트 커버리지 100% 달성을 향해 나아가고 있습니다.
-이와 같은 포괄적인 접근 방식을 통해 어떤 회귀 문제도 신속하게 식별하고 수정할 수 있어, 애플리케이션의 무결성을 보장합니다.
-
-<img src="./public/e2etest.png" alt="logo" width="80%" />
 
 <br/>
 
@@ -174,6 +150,28 @@ src
 
 </br>
 
+## TEST 전략
+
+코드베이스의 높은 품질과 견고성을 유지하기 위해, 행동 주도 개발(BDD) 테스트 방법론을 채택했습니다. 테스트 전략은 애플리케이션의 모든 측면이 검증될 수 있도록 세심하게 구성되었습니다.
+
+### unit testing
+
+각 모듈 내에 테스트 디렉토리를 구축하여 `Controller`와 `Service` 계층이 전용 unit test를 가지도록 했습니다.
+unit test는 모든 실행 경로를 검토하여 성공하는 시나리오가 포함되도록 하였습니다.
+현재 예상되는 실패 시나리오에 대한 케이스를 체계적으로 추가하고 있으며, 이를 통해 에러 처리 능력을 향상하고자 합니다.
+
+<img src="./public/unittest.png" alt="logo" width="80%" />
+
+### e2e testing
+
+`app.e2e-spec.ts` 파일은 모든 API 응답에 대한 포괄적인 테스트를 포함하고 있습니다.
+성공적인 응답과 실패한 응답에 사례를 모두에 균형적인 초점을 맞추어 테스트 커버리지 100% 달성을 향해 나아가고 있습니다.
+이와 같은 포괄적인 접근 방식을 통해 어떤 회귀 문제도 신속하게 식별하고 수정할 수 있어, 애플리케이션의 무결성을 보장합니다.
+
+<img src="./public/e2etest.png" alt="logo" width="80%" />
+
+<br/>
+
 ## API Reference
 
 Swagger : http://localhost:{port}/swagger#/
@@ -185,14 +183,6 @@ Swagger : http://localhost:{port}/swagger#/
 ## ERD
 
 <img src="./public/erd.png" alt="logo" width="80%" />
-<br/>
-
-## 프로젝트 진행 및 이슈 관리
-
-[프로젝트 관리 페이지](https://dev-j.notion.site/MoneyNote-e63f8e6a1ee04e7ab5e6edefd9df6021?pvs=4)
-
-<img src="./public/timeline.png" alt="logo" width="80%" />
-
 <br/>
 
 ## TIL 및 회고
