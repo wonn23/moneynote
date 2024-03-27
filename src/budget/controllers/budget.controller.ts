@@ -45,7 +45,7 @@ export class BudgetController {
     type: Budget,
   })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '카테고리를 찾을 수 없습니다.',
   })
   @ApiInternalServerErrorResponse({
     description: '서버 내부 오류가 발생했습니다.',
@@ -67,7 +67,7 @@ export class BudgetController {
     type: [Budget],
   })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '해당 연도와 월의 예산 데이터를 찾을 수 없습니다.',
   })
   @ApiInternalServerErrorResponse({
     description: '서버 내부 오류가 발생했습니다.',
@@ -94,7 +94,7 @@ export class BudgetController {
   })
   @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '해당 연도의 예산 데이터를 찾을 수 없습니다.',
   })
   @ApiParam({
     name: 'year',
@@ -116,7 +116,7 @@ export class BudgetController {
   })
   @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '해당 연도와 월의 예산 데이터를 찾을 수 없습니다.',
   })
   @ApiParam({
     name: 'year',
@@ -145,7 +145,7 @@ export class BudgetController {
   })
   @ApiOkResponse({ description: '예산 수정 성공', type: Budget })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '예산 아이디 혹은 카테고리 찾을 수 없습니다.',
   })
   @ApiParam({
     name: 'id',
@@ -168,7 +168,7 @@ export class BudgetController {
   })
   @ApiOkResponse({ description: '예산 수정 성공' })
   @ApiNotFoundResponse({
-    description: '해당 리소스를 찾을 수 없습니다.',
+    description: '예산 아이디 혹은 카테고리 찾을 수 없습니다.',
   })
   @ApiParam({
     name: 'id',
