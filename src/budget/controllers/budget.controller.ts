@@ -17,9 +17,12 @@ import { Budget } from '../entities/budget.entity'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
-  ApiQuery,
-  ApiResponse,
+  ApiParam,
+  ApiProperty,
   ApiTags,
 } from '@nestjs/swagger'
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
@@ -32,16 +35,21 @@ import { User } from 'src/user/entities/user.entity'
 export class BudgetController {
   constructor(private budgetService: BudgetService) {}
 
+  @Post()
   @ApiOperation({
-    summary: '예산 설정',
+    summary: '예산 생성',
     description: '유저가 카테고리별 예산 금액을 설정합니다.',
   })
-  @ApiResponse({
-    status: 201,
-    description: '성공',
-    type: CreateBudgetDto,
+  @ApiCreatedResponse({
+    description: '예산 생성 성공',
+    type: Budget,
   })
-  @Post()
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiInternalServerErrorResponse({
+    description: '서버 내부 오류가 발생했습니다.',
+  })
   async create(
     @Body() createBudgetDto: CreateBudgetDto,
     @GetUser() user: User,
@@ -49,21 +57,28 @@ export class BudgetController {
     return this.budgetService.createBudget(createBudgetDto, user)
   }
 
+  @Post('/design')
   @ApiOperation({
     summary: '예산 추천',
     description: '총 금액 입력시 자동으로 카테고리별 예산을 설정해줍니다.',
   })
-  @ApiQuery({
-    name: 'totalAmount',
-    required: true,
-    description: '예산 총금액',
-    example: 1000000,
-  })
   @ApiCreatedResponse({
-    description: '성공',
-    type: Object,
+    description: '예산 추천 성공',
+    type: [Budget],
   })
-  @Post('/design')
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiInternalServerErrorResponse({
+    description: '서버 내부 오류가 발생했습니다.',
+  })
+  @ApiProperty({
+    name: 'totalAmount',
+    example: 1000000,
+    description: '예산 총금액',
+  })
+  @ApiProperty({ name: 'year', example: 2024, description: '연도' })
+  @ApiProperty({ name: 'month', example: 3, description: '월' })
   async design(
     @Body('totalAmount') totalAmount: number,
     @Body('year') year: number,
@@ -73,7 +88,20 @@ export class BudgetController {
   }
 
   @Get('/year/:year')
-  // 예산 조회 연도별
+  @ApiOperation({
+    summary: '예산 조회 연도별',
+    description: '예산을 연도별로 조회할 수 있습니다.',
+  })
+  @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiParam({
+    name: 'year',
+    required: true,
+    description: '조회할 연도',
+    example: 2024,
+  })
   async findBudgetByYear(
     @Param('year', ParseIntPipe) year: number,
     @GetUser() user: User,
@@ -82,7 +110,26 @@ export class BudgetController {
   }
 
   @Get('/year/:year/month/:month')
-  // 예산 조회 연월별
+  @ApiOperation({
+    summary: '예산 조회 연도와 월별',
+    description: '예산을 연도와 월로 조회할 수 있습니다.',
+  })
+  @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiParam({
+    name: 'year',
+    required: true,
+    description: '조회할 연도',
+    example: 2024,
+  })
+  @ApiParam({
+    name: 'month',
+    required: true,
+    description: '조회할 월',
+    example: 3,
+  })
   async findBudgetByYearAndMonth(
     @Param('year', ParseIntPipe) year: number,
     @Param('month', ParseIntPipe) month: number,
@@ -92,6 +139,20 @@ export class BudgetController {
   }
 
   @Put(':id')
+  @ApiOperation({
+    summary: '예산 수정',
+    description: '유저가 예산을 수정할 수 있습니다.',
+  })
+  @ApiOkResponse({ description: '예산 수정 성공', type: Budget })
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: '예산 아이디',
+    example: '1',
+  })
   async update(
     @Param('id') id: string,
     @Body() updateBudgetDto: UpdateBudgetDto,
@@ -101,6 +162,20 @@ export class BudgetController {
   }
 
   @Delete(':id')
+  @ApiOperation({
+    summary: '예산 삭제',
+    description: '유저가 예산을 삭제할 수 있습니다.',
+  })
+  @ApiOkResponse({ description: '예산 수정 성공' })
+  @ApiNotFoundResponse({
+    description: '해당 리소스를 찾을 수 없습니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: '예산 아이디',
+    example: '1',
+  })
   async delete(@Param('id') id: string): Promise<void> {
     await this.budgetService.deleteBudget(+id)
   }
