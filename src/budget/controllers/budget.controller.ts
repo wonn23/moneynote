@@ -8,8 +8,8 @@ import {
   Delete,
   Put,
   ParseIntPipe,
+  Inject,
 } from '@nestjs/common'
-import { BudgetService } from '../services/budget.service'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { AuthGuard } from '@nestjs/passport'
@@ -27,13 +27,16 @@ import {
 } from '@nestjs/swagger'
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
 import { User } from 'src/user/entities/user.entity'
+import { IBUDGET_SERVICE } from 'src/common/di.tokens'
+import { IBudgetService } from '../interfaces/budget.service.interface'
+import { BudgetDesign } from '../interfaces/budget-design.interface'
 
 @ApiTags('예산')
 @ApiBearerAuth()
 @UseGuards(AuthGuard())
 @Controller('budgets')
 export class BudgetController {
-  constructor(private budgetService: BudgetService) {}
+  constructor(@Inject(IBUDGET_SERVICE) private budgetService: IBudgetService) {}
 
   @Post()
   @ApiOperation({
@@ -83,7 +86,7 @@ export class BudgetController {
     @Body('totalAmount') totalAmount: number,
     @Body('year') year: number,
     @Body('month') month: number,
-  ) {
+  ): Promise<BudgetDesign[]> {
     return this.budgetService.designBudget(totalAmount, year, month)
   }
 
@@ -151,14 +154,14 @@ export class BudgetController {
     name: 'id',
     required: true,
     description: '예산 아이디',
-    example: '1',
+    example: 1,
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateBudgetDto: UpdateBudgetDto,
     @GetUser() userId: User,
   ): Promise<Budget> {
-    return this.budgetService.updateBudget(+id, updateBudgetDto, userId)
+    return this.budgetService.updateBudget(id, updateBudgetDto, userId)
   }
 
   @Delete(':id')
@@ -174,9 +177,9 @@ export class BudgetController {
     name: 'id',
     required: true,
     description: '예산 아이디',
-    example: '1',
+    example: 1,
   })
-  async delete(@Param('id') id: string): Promise<void> {
-    await this.budgetService.deleteBudget(+id)
+  async delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.budgetService.deleteBudget(id)
   }
 }

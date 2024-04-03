@@ -1,26 +1,37 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
-import { DataSource, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 import { Budget } from '../entities/budget.entity'
 import { User } from 'src/user/entities/user.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Category } from '../entities/category.entity'
+import { Transactional } from 'typeorm-transactional'
+import { IBudgetService } from '../interfaces/budget.service.interface'
+import {
+  Ratio,
+  BudgetAmount,
+  IBudgetDesignStrategy,
+} from '../interfaces/budget-design.interface'
+import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/di.tokens'
 
 @Injectable()
-export class BudgetService {
+export class BudgetService implements IBudgetService {
   constructor(
     @InjectRepository(Budget)
     private budgetRepository: Repository<Budget>,
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
-    private dataSource: DataSource,
+    @Inject(IBUDGET_DESIGN_STRAGTEGY)
+    private readonly budgetDesignStrategy: IBudgetDesignStrategy,
   ) {}
 
+  @Transactional()
   async createBudget(
     createBudgetDto: CreateBudgetDto,
     user: User,
@@ -29,19 +40,16 @@ export class BudgetService {
       const { category, ...rest } = createBudgetDto
 
       // category 테이블에서 body값에 맞는 category_id 찾기
-      const foundCategory = await this.categoryRepository.findOne({
-        where: { name: category },
+      const categoryName = await this.categoryRepository.findOneBy({
+        name: category,
       })
 
-      if (!foundCategory) {
+      if (!categoryName) {
         throw new NotFoundException('카테고리를 찾을 수 없습니다.')
       }
 
-      const budget = this.budgetRepository.create({
-        ...rest,
-        category: foundCategory,
-        user,
-      })
+      const budget = this.budgetRepository.create()
+      Object.assign(budget, rest, { category: categoryName, user })
 
       return await this.budgetRepository.save(budget)
     } catch (error) {
@@ -49,110 +57,62 @@ export class BudgetService {
     }
   }
 
-  async designBudget(totalAmount: number, year: number, month: number) {
-    try {
-      const ratios = await this.getAverageCategoryRatios(year, month)
-      if (!ratios || ratios.length === 0) {
-        throw new NotFoundException(
-          '해당 연도와 월의 예산 데이터가 존재하지 않습니다.',
-        )
-      }
+  async designBudget(
+    totalAmount: number,
+    year: number,
+    month: number,
+  ): Promise<BudgetAmount[]> {
+    const ratios = await this.calculateCategoryRatios(year, month)
+    return this.budgetDesignStrategy.designBudget(ratios, totalAmount)
+  }
 
-      const totalCategoryRatio =
-        ratios.find((ratio) => ratio.name === '전체')?.ratio || 1
+  async calculateCategoryRatios(year: number, month: number): Promise<Ratio[]> {
+    // 카테고리별 평균 amount 조회 및 전체 amount 계산
+    const categoryAmounts = await this.budgetRepository
+      .createQueryBuilder('budget')
+      .select('category.name', 'categoryName')
+      .addSelect('AVG(budget.amount)', 'averageAmount')
+      .innerJoin('budget.category', 'category')
+      .where('budget.year = :year AND budget.month = :month', { year, month })
+      .andWhere('category.name <> :totalCategory', { totalCategory: '전체' })
+      .groupBy('category.name')
+      .getRawMany()
 
-      const budgetDesigns = ratios
-        .filter((ratio) => ratio.name !== '전체')
-        .map((ratio) => {
-          const calculateAmount =
-            (totalAmount * ratio.ratio) / totalCategoryRatio
-          return {
-            category: ratio.name,
-            budget: Math.round(calculateAmount),
-          }
-        })
+    const totalAmount = categoryAmounts.reduce(
+      (total, curr) => total + parseFloat(curr.averageAmount),
+      0,
+    )
 
-      const otherCategories = budgetDesigns.filter(
-        (budget) => budget.budget <= totalAmount * 0.1,
-      )
-
-      const otherTotalBudget = otherCategories.reduce(
-        (total, curr) => total + curr.budget,
-        0,
-      )
-
-      const filteredBudgets = budgetDesigns.filter(
-        (budget) => budget.budget > totalAmount * 0.1,
-      )
-      if (otherTotalBudget > 0) {
-        filteredBudgets.push({ category: '기타', budget: otherTotalBudget })
-      }
-
-      return filteredBudgets
-    } catch (error) {
-      throw new InternalServerErrorException(
-        '예산 설계 중 에러가 발생했습니다.',
-      )
+    // 전체 카테고리 비율 계산 (기본 비율 또는 DB에서 조회된 비율 사용)
+    if (categoryAmounts.length === 0) {
+      return this.getDefaultRatios()
+    } else {
+      return categoryAmounts.map((cat) => ({
+        categoryName: cat.categoryName,
+        ratio: (parseFloat(cat.averageAmount) / totalAmount).toFixed(3),
+      }))
     }
   }
 
-  async getAverageCategoryRatios(year: number, month: number) {
-    // 해당 year과 month에 해당하는 전체 유저의 예산 평균 비율을 계산한다.
-    try {
-      const ratios = await this.budgetRepository
-        .createQueryBuilder('budget')
-        .select('category.name', 'name')
-        .addSelect('AVG(budget.amount)', 'averageAmount')
-        .innerJoin(Category, 'category', 'budget.category_id = category.id')
-        .where('budget.year = :year AND budget.month = :month', { year, month })
-        .groupBy('category.name')
-        .getRawMany()
-
-      if (ratios.length === 0) {
-        return [
-          { name: '식사', ratio: 0.35 },
-          { name: '교통', ratio: 0.13 },
-          { name: '문화생활', ratio: 0.15 },
-          { name: '생활용품', ratio: 0.12 },
-          { name: '주거/통신', ratio: 0.25 },
-        ]
-      } else {
-        const totalBudget = ratios.find((ratio) => ratio.name === '전체')
-          ?.averageAmount
-        if (totalBudget) {
-          return ratios
-            .map((ratio) => {
-              if (ratio.name !== '전체') {
-                return {
-                  name: ratio.name,
-                  ratio: (
-                    parseFloat(ratio.averageAmount) / parseFloat(totalBudget)
-                  ).toFixed(3),
-                }
-              }
-            })
-            .filter(Boolean) // '전체' 카테고리 제외
-        }
-      }
-
-      return ratios
-    } catch (error) {
-      throw new InternalServerErrorException(
-        '예산 비율 계산 중 에러가 발생했습니다.',
-      )
-    }
+  private getDefaultRatios(): Ratio[] {
+    return [
+      { categoryName: '식사', ratio: '0.35' },
+      { categoryName: '교통', ratio: '0.13' },
+      { categoryName: '문화생활', ratio: '0.15' },
+      { categoryName: '생활용품', ratio: '0.12' },
+      { categoryName: '주거/통신', ratio: '0.25' },
+    ]
   }
 
   async findBudgetByYear(year: number, user: User): Promise<Budget[]> {
-    const budgets = await this.budgetRepository
-      .createQueryBuilder('budget')
-      .where('budget.year = :year AND budget.user_id = :user', {
+    const budgets = await this.budgetRepository.find({
+      where: {
         year,
         user,
-      })
-      .getRawMany()
+      },
+    })
 
-    if (!budgets.length) {
+    if (budgets.length === 0) {
       throw new NotFoundException(
         `해당 연도(${year})의 예산 데이터를 찾을 수 없습니다.`,
       )
@@ -166,13 +126,13 @@ export class BudgetService {
     month: number,
     user: User,
   ): Promise<Budget[]> {
-    const budgets = await this.budgetRepository
-      .createQueryBuilder('budget')
-      .where(
-        'budget.user_id = :user AND budget.year =:year AND budget.month = :month',
-        { year, month, user },
-      )
-      .getRawMany()
+    const budgets = await this.budgetRepository.find({
+      where: {
+        year,
+        month,
+        user,
+      },
+    })
 
     if (!budgets.length) {
       throw new NotFoundException(
@@ -182,47 +142,31 @@ export class BudgetService {
     return budgets
   }
 
+  @Transactional()
   async updateBudget(
     id: number,
     updateBudgetDto: UpdateBudgetDto,
     user: User,
   ): Promise<Budget> {
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
+    const budget = await this.budgetRepository.findOneBy({
+      id,
+      user: { id: user.id },
+    })
 
-    try {
-      const category = await queryRunner.manager.findOne(Category, {
-        where: { name: updateBudgetDto.category },
-      })
-
-      if (!category) {
-        throw new NotFoundException('카테고리를 찾을 수 없습니다.')
-      }
-
-      const budget = await queryRunner.manager.findOne(Budget, {
-        where: { id, user: { id: user.id } },
-        relations: ['category', 'user'],
-      })
-
-      if (!budget) {
-        throw new NotFoundException(`해당 ID(${id})의 예산을 찾을 수 없습니다.`)
-      }
-
-      budget.amount = updateBudgetDto.amount
-      budget.category = category
-
-      await queryRunner.manager.save(budget)
-
-      await queryRunner.commitTransaction()
-
-      return budget
-    } catch (error) {
-      await queryRunner.rollbackTransaction()
-      throw new InternalServerErrorException('예산을 수정하는데 실패했습니다.')
-    } finally {
-      await queryRunner.release()
+    if (!budget) {
+      throw new NotFoundException(`해당 ID(${id})의 예산을 찾을 수 없습니다.`)
     }
+    const category = await this.categoryRepository.findOneBy({
+      name: updateBudgetDto.category,
+    })
+
+    if (!category) {
+      throw new NotFoundException('카테고리를 찾을 수 없습니다.')
+    }
+
+    Object.assign(budget, updateBudgetDto, { category })
+
+    return await this.budgetRepository.save(budget)
   }
 
   async deleteBudget(id: number): Promise<void> {
