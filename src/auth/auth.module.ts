@@ -5,16 +5,14 @@ import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
 import { JwtAccessTokenStrategy } from './jwt-strategies/jwt-access.strategy'
 import { JwtRefreshTokenStrategy } from './jwt-strategies/jwt-refresh.strategy'
-import { UserRepository } from 'src/user/repositories/user.repository'
-import { TypeOrmExModule } from 'src/common/typeorm-ex.module'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { Refresh } from 'src/user/entities/refresh.entity'
+import { User } from 'src/user/entities/user.entity'
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmExModule.forCustomRepository([UserRepository]),
-    TypeOrmModule.forFeature([Refresh]),
+    TypeOrmModule.forFeature([Refresh, User]),
     JwtModule.register({}),
   ],
   controllers: [AuthController],

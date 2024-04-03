@@ -5,7 +5,6 @@ import { Expense } from '../entities/expense.entity'
 import { Category } from 'src/budget/entities/category.entity'
 import { Repository } from 'typeorm'
 import { Budget } from 'src/budget/entities/budget.entity'
-import { UserRepository } from 'src/user/repositories/user.repository'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { NotFoundException } from '@nestjs/common'
@@ -32,7 +31,7 @@ const mockCategoryRepository = {
 
 describe('ExpenseService', () => {
   let service: ExpenseService
-  let userRepository: UserRepository
+  let userRepository: Repository<User>
   let budgetRepository: Repository<Budget>
   let expenseRepository: Repository<Expense>
   let categoryRepository: Repository<Category>
@@ -42,7 +41,7 @@ describe('ExpenseService', () => {
       providers: [
         ExpenseService,
         {
-          provide: UserRepository,
+          provide: getRepositoryToken(User),
           useValue: mockUserRepository,
         },
         {

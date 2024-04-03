@@ -16,14 +16,12 @@ import { Expense } from '../entities/expense.entity'
 import { AuthGuard } from '@nestjs/passport'
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
 import {
-  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
 

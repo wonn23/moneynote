@@ -3,33 +3,26 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common'
-import { InjectDataSource, InjectRepository } from '@nestjs/typeorm'
 import { User } from '../entities/user.entity'
 import * as bcrypt from 'bcryptjs'
-import { UserRepository } from '../repositories/user.repository'
-import { DataSource } from 'typeorm'
+import { Repository } from 'typeorm'
+import { Transactional } from 'typeorm-transactional'
+import { InjectRepository } from '@nestjs/typeorm'
 
 @Injectable()
 export class UserService {
   constructor(
-    private userRepository: UserRepository,
-    @InjectDataSource()
-    private dataSource: DataSource,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
-  // 회원가입
+  @Transactional()
   async signUp(
     username: string,
     password: string,
     consultingYn: boolean,
   ): Promise<object> {
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
-
-    const user = await queryRunner.manager
-      .getRepository(User)
-      .findOne({ where: { username } })
+    const user = await this.userRepository.findOneBy({ username })
 
     if (user) {
       throw new ForbiddenException('이미 존재하는 유저이름입니다.')
@@ -39,20 +32,16 @@ export class UserService {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     try {
-      await queryRunner.manager.getRepository(User).save({
+      await this.userRepository.save({
         username,
         password: hashedPassword,
         consultingYn,
       })
 
-      await queryRunner.commitTransaction()
       return { message: '회원가입에 성공했습니다' }
     } catch (error) {
       console.error(error)
-      await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException('서버에러')
-    } finally {
-      await queryRunner.release()
     }
   }
 }

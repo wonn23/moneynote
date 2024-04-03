@@ -1,23 +1,19 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
-import { UserRepository } from 'src/user/repositories/user.repository'
-import { DataSource, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Category } from 'src/budget/entities/category.entity'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { Budget } from 'src/budget/entities/budget.entity'
+import { User } from 'src/user/entities/user.entity'
 
 @Injectable()
 export class ExpenseService {
   constructor(
-    private userRepository: UserRepository,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @InjectRepository(Budget)
     private budgetRepository: Repository<Budget>,
     @InjectRepository(Expense)
@@ -142,6 +138,7 @@ export class ExpenseService {
     const miniBudget = 1000
 
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const year = today.getFullYear()
     const month = today.getMonth() + 1
     const totalDays = new Date(year, month, 0).getDate()
@@ -152,6 +149,16 @@ export class ExpenseService {
     // 이번 연도, 월에 대한 카테고리 예산
     for (let i = 1; i < enumLength + 1; i++) {
       const categoryId = i
+
+      const category = await this.categoryRepository.findOne({
+        where: { id: categoryId },
+      })
+      if (!category) {
+        throw new NotFoundException(
+          `CategoryId ${categoryId}에 해당하는 카테고리를 찾을 수 없습니다.`,
+        )
+      }
+      // 해당 카테고리의 예산 찾기
       const budget = await this.budgetRepository
         .createQueryBuilder('budget')
         .where('budget.user_id = :userId', { userId })
@@ -166,6 +173,7 @@ export class ExpenseService {
         )
       }
 
+      // 1일부터 오늘까지 사용한 지출액
       let currentMonthExpenseCategoryAmount = await this.expenseRepository
         .createQueryBuilder('expense')
         .select('SUM(expense.amount)', 'amount')
@@ -193,17 +201,20 @@ export class ExpenseService {
       )
 
       // 최소 추천 지출 금액
-      todaysRecommendedExpenditureAmount =
-        todaysRecommendedExpenditureAmount < miniBudget
-          ? miniBudget
-          : todaysRecommendedExpenditureAmount
+      if (budget.amount !== 0) {
+        todaysRecommendedExpenditureAmount =
+          todaysRecommendedExpenditureAmount < miniBudget
+            ? miniBudget
+            : todaysRecommendedExpenditureAmount
 
-      todayRecommendedExpenseByCategory.push({
-        categoryId,
-        todaysRecommendedExpenditureAmount,
-      })
+        todayRecommendedExpenseByCategory.push({
+          categoryName: category.name,
+          todaysRecommendedExpenditureAmount,
+        })
+      }
     }
 
+    // 전체 예산 제외
     const todayRecommendedExpenseByCategoryExcludingTotal =
       todayRecommendedExpenseByCategory.slice(1)
 
@@ -218,11 +229,11 @@ export class ExpenseService {
       todayRecommendedExpenseByCategory[0].todaysRecommendedExpenditureAmount
 
     let message = ''
-    if (totalDailyBudget > budgetICanUseToday) {
+    if (totalDailyBudget < budgetICanUseToday) {
       message = '돈을 잘 아끼고 있네요. 오늘도 무지출 챌린지 가보자!'
     } else if (totalDailyBudget === budgetICanUseToday) {
       message = '합리적으로 소비하고 있네요 좋습니다.'
-    } else if (totalDailyBudget < budgetICanUseToday) {
+    } else if (totalDailyBudget > budgetICanUseToday) {
       message = '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!'
     }
     return {
@@ -400,6 +411,7 @@ export class ExpenseService {
       .groupBy('expense.category_id')
       .getRawMany()
 
+    // 각 데이터에 접근하는 쿼리는 비동기이고 독립적이므로 Promise.all() 사용
     const [lastWeekExpenditures, thisWeekExpenditures] = await Promise.all([
       lastDayExpenditure,
       thisDayExpenditure,

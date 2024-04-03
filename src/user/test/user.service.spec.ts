@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { UserService } from '../services/user.service'
 import { DataSource } from 'typeorm'
-import { UserRepository } from '../repositories/user.repository'
 import { ForbiddenException } from '@nestjs/common'
 import { User } from '../entities/user.entity'
 
@@ -61,7 +60,7 @@ describe('UserService', () => {
       providers: [
         UserService,
         {
-          provide: UserRepository,
+          provide: User,
           useValue: mockUserRepository,
         },
         {

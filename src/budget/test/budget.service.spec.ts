@@ -3,41 +3,19 @@ import { BudgetService } from '../services/budget.service'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { Budget } from '../entities/budget.entity'
 import { Category } from '../entities/category.entity'
-import { DataSource, Repository } from 'typeorm'
 import { User } from 'src/user/entities/user.entity'
 import { categoryEnum } from '../types/budget.enum'
 import { InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
-
-const mockBudgetRepository = {
-  create: jest.fn(),
-  save: jest.fn(),
-  findOne: jest.fn(),
-  find: jest.fn(),
-  delete: jest.fn(),
-  createQueryBuilder: jest.fn(),
-}
-
-const mockCategoryRepository = {
-  findOne: jest.fn(),
-}
-
-const mockDataSource = {
-  createQueryRunner: jest.fn().mockReturnValue({
-    connect: jest.fn(),
-    startTransaction: jest.fn(),
-    manager: mockBudgetRepository,
-    commitTransaction: jest.fn(),
-    rollbackTransaction: jest.fn(),
-    release: jest.fn(),
-  }),
-}
+import {
+  MockRepository,
+  MockRepositoryFactory,
+} from 'src/common/utils/mock-repository.factory'
 
 describe('BudgetService', () => {
   let service: BudgetService
-  let budgetRepository: Repository<Budget>
-  let categoryRepository: Repository<Category>
-  let dataSource: DataSource
+  let budgetRepository: ReturnType<typeof MockRepositoryFactory.create>
+  let categoryRepository: ReturnType<typeof MockRepositoryFactory.create>
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -45,31 +23,26 @@ describe('BudgetService', () => {
         BudgetService,
         {
           provide: getRepositoryToken(Budget),
-          useValue: mockBudgetRepository,
+          useValue: MockRepositoryFactory.create(Budget),
         },
         {
           provide: getRepositoryToken(Category),
-          useValue: mockCategoryRepository,
+          useValue: MockRepositoryFactory.create(Category),
         },
-        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile()
 
     service = module.get<BudgetService>(BudgetService)
-    budgetRepository = module.get<Repository<Budget>>(
-      getRepositoryToken(Budget),
-    )
-    categoryRepository = module.get<Repository<Category>>(
-      getRepositoryToken(Category),
-    )
-    dataSource = module.get(DataSource)
+    budgetRepository = module.get(getRepositoryToken(Budget))
+    categoryRepository = module.get(getRepositoryToken(Category))
+
+    jest.clearAllMocks()
   })
 
   it('should be defined', () => {
     expect(service).toBeDefined()
     expect(budgetRepository).toBeDefined()
     expect(categoryRepository).toBeDefined()
-    expect(dataSource).toBeDefined()
   })
 
   describe('createBudget', () => {
@@ -80,16 +53,16 @@ describe('BudgetService', () => {
         amount: 1000000,
         category: categoryEnum.food,
       }
-      const user = { id: 'user-id', username: 'testUser' } as User
+      const user = { id: 'testUserId', username: 'testUser' } as User
 
-      mockCategoryRepository.findOne.mockResolvedValueOnce(new Category())
-      mockBudgetRepository.save.mockImplementationOnce((budget) =>
-        Promise.resolve({ ...budget }),
-      )
+      categoryRepository.findOne.mockResolvedValue({ id: 1, name: 'food' })
+      budgetRepository.save.mockResolvedValue(createBudgetDto)
 
-      await expect(
-        service.createBudget(createBudgetDto, user),
-      ).resolves.not.toThrow()
+      const result = await service.createBudget(createBudgetDto, user)
+
+      expect(budgetRepository.save).toHaveBeenCalled()
+      expect(result).toEqual(createBudgetDto)
+      expect(service.createBudget(createBudgetDto, user)).resolves.not.toThrow()
     })
   })
 
@@ -131,7 +104,7 @@ describe('BudgetService', () => {
     it('데이터를 찾았을 때 계산된 비율을 return 합니다.', async () => {
       const year = 2024
       const month = 1
-      mockBudgetRepository.createQueryBuilder.mockReturnValue({
+      budgetRepository.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         innerJoin: jest.fn().mockReturnThis(),
@@ -147,7 +120,7 @@ describe('BudgetService', () => {
         ]),
       })
 
-      const ratios = await service.getAverageCategoryRatios(year, month)
+      const ratios = await service.calculateCategoryRatios(year, month)
       expect(ratios).toEqual([
         { name: '식사', ratio: '0.500' },
         { name: '교통', ratio: '0.075' },
@@ -160,7 +133,7 @@ describe('BudgetService', () => {
     it('데이터를 찾지 못해 기본 비율을 return 합니다.', async () => {
       const year = 2024
       const month = 1
-      mockBudgetRepository.createQueryBuilder.mockReturnValue({
+      budgetRepository.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         innerJoin: jest.fn().mockReturnThis(),
@@ -175,7 +148,7 @@ describe('BudgetService', () => {
         ]),
       })
 
-      const ratios = await service.getAverageCategoryRatios(year, month)
+      const ratios = await service.calculateCategoryRatios(year, month)
       expect(ratios).toEqual([
         { name: '식사', ratio: '0.35' },
         { name: '교통', ratio: '0.13' },
@@ -191,7 +164,7 @@ describe('BudgetService', () => {
       const year = 2024
       const category = { id: 1 }
       const user = { id: 'user-id' } as User
-      mockBudgetRepository
+      budgetRepository
         .createQueryBuilder()
         .where()
         .getRawMany.mockResolvedValue([
@@ -223,7 +196,7 @@ describe('BudgetService', () => {
       const year = 2024
       const user = { id: 'user-id' } as User
 
-      mockBudgetRepository
+      budgetRepository
         .createQueryBuilder()
         .where()
         .getRawMany.mockResolvedValue([])
@@ -241,7 +214,7 @@ describe('BudgetService', () => {
       const category = { id: 1 }
       const user = { id: 'user-id' } as User
 
-      mockBudgetRepository
+      budgetRepository
         .createQueryBuilder()
         .where()
         .getRawMany.mockResolvedValue([
@@ -274,7 +247,7 @@ describe('BudgetService', () => {
       const month = 1
       const user = { id: 'user-id' } as User
 
-      mockBudgetRepository
+      budgetRepository
         .createQueryBuilder()
         .where()
         .getRawMany.mockResolvedValue([])

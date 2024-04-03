@@ -3,10 +3,10 @@ import { AuthService } from '../services/auth.service'
 import { Refresh } from 'src/user/entities/refresh.entity'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import { UserRepository } from 'src/user/repositories/user.repository'
 import * as bcrypt from 'bcrypt'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { SignInDto } from '../dto/signin.dto'
+import { User } from 'src/user/entities/user.entity'
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -57,7 +57,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: JwtService, useValue: mockJwtService },
-        { provide: UserRepository, useValue: mockUserRepository },
+        { provide: User, useValue: mockUserRepository },
         {
           provide: getRepositoryToken(Refresh),
           useValue: mockRefreshRepository,
