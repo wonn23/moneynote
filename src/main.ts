@@ -5,9 +5,13 @@ import { ValidationPipe, Logger } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter'
 import { NestExpressApplication } from '@nestjs/platform-express'
+import { initializeTransactionalContext } from 'typeorm-transactional'
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  initializeTransactionalContext()
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    abortOnError: true,
+  })
 
   app.enableCors({
     origin: true,

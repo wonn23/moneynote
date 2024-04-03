@@ -8,6 +8,8 @@ import { BudgetModule } from './budget/budget.module'
 import { ExpenseModule } from './expense/expense.module'
 import { WebhookModule } from './webhook/webhook.module'
 import { LoggerMiddleware } from './common/middlewares/logger.middleware'
+import { addTransactionalDataSource } from 'typeorm-transactional'
+import { DataSource } from 'typeorm'
 
 @Module({
   imports: [
@@ -26,6 +28,13 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware'
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) =>
         await typeORMConfig(configService),
+      async dataSourceFactory(options) {
+        if (!options) {
+          throw new Error('Invalid options passed')
+        }
+
+        return addTransactionalDataSource(new DataSource(options))
+      },
     }),
     AuthModule,
     UserModule,
