@@ -26,7 +26,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { GetUser } from 'src/auth/decorator/get-user.decorator'
-import { User } from 'src/user/entities/user.entity'
 import { IBUDGET_SERVICE } from 'src/common/di.tokens'
 import { IBudgetService } from '../interfaces/budget.service.interface'
 import { BudgetDesign } from '../interfaces/budget-design.interface'
@@ -55,9 +54,9 @@ export class BudgetController {
   })
   async create(
     @Body() createBudgetDto: CreateBudgetDto,
-    @GetUser() user: User,
+    @GetUser() userId: string,
   ): Promise<Budget> {
-    return this.budgetService.createBudget(createBudgetDto, user)
+    return this.budgetService.createBudget(createBudgetDto, userId)
   }
 
   @Post('/design')
@@ -107,9 +106,9 @@ export class BudgetController {
   })
   async findBudgetByYear(
     @Param('year', ParseIntPipe) year: number,
-    @GetUser() user: User,
+    @GetUser() userId: string,
   ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYear(year, user)
+    return this.budgetService.findBudgetByYear(year, userId)
   }
 
   @Get('/year/:year/month/:month')
@@ -136,9 +135,9 @@ export class BudgetController {
   async findBudgetByYearAndMonth(
     @Param('year', ParseIntPipe) year: number,
     @Param('month', ParseIntPipe) month: number,
-    @GetUser() user: User,
+    @GetUser() userId: string,
   ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYearAndMonth(year, month, user)
+    return this.budgetService.findBudgetByYearAndMonth(year, month, userId)
   }
 
   @Put(':id')
@@ -159,7 +158,7 @@ export class BudgetController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateBudgetDto: UpdateBudgetDto,
-    @GetUser() userId: User,
+    @GetUser() userId: string,
   ): Promise<Budget> {
     return this.budgetService.updateBudget(id, updateBudgetDto, userId)
   }

@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { Repository } from 'typeorm'
@@ -23,6 +18,8 @@ import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/di.tokens'
 @Injectable()
 export class BudgetService implements IBudgetService {
   constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @InjectRepository(Budget)
     private budgetRepository: Repository<Budget>,
     @InjectRepository(Category)
@@ -34,27 +31,27 @@ export class BudgetService implements IBudgetService {
   @Transactional()
   async createBudget(
     createBudgetDto: CreateBudgetDto,
-    user: User,
+    userId: string,
   ): Promise<Budget> {
-    try {
-      const { category, ...rest } = createBudgetDto
+    const { category: categoryName, ...budgetDetails } = createBudgetDto
 
-      // category 테이블에서 body값에 맞는 category_id 찾기
-      const categoryName = await this.categoryRepository.findOneBy({
-        name: category,
-      })
+    const category = await this.categoryRepository.findOneBy({
+      name: categoryName,
+    })
 
-      if (!categoryName) {
-        throw new NotFoundException('카테고리를 찾을 수 없습니다.')
-      }
-
-      const budget = this.budgetRepository.create()
-      Object.assign(budget, rest, { category: categoryName, user })
-
-      return await this.budgetRepository.save(budget)
-    } catch (error) {
-      throw new InternalServerErrorException('예산 생산에 문제가 발생했습니다.')
+    if (!categoryName) {
+      throw new NotFoundException(
+        `카테고리 '${categoryName}'를 찾을 수 없습니다.`,
+      )
     }
+
+    const budget = this.budgetRepository.create({
+      ...budgetDetails,
+      category,
+      user: { id: userId },
+    })
+
+    return await this.budgetRepository.save(budget)
   }
 
   async designBudget(
@@ -104,41 +101,44 @@ export class BudgetService implements IBudgetService {
     ]
   }
 
-  async findBudgetByYear(year: number, user: User): Promise<Budget[]> {
-    const budgets = await this.budgetRepository.find({
-      where: {
-        year,
-        user,
-      },
-    })
-
-    if (budgets.length === 0) {
-      throw new NotFoundException(
-        `해당 연도(${year})의 예산 데이터를 찾을 수 없습니다.`,
-      )
-    }
-
-    return budgets
+  async findBudgetByYear(year: number, userId: string): Promise<Budget[]> {
+    return this.findBudgets({ year, userId })
   }
 
   async findBudgetByYearAndMonth(
     year: number,
     month: number,
-    user: User,
+    userId: string,
   ): Promise<Budget[]> {
+    return this.findBudgets({ year, month, userId })
+  }
+
+  private async findBudgets(
+    filter: Partial<{ year: number; month: number; userId: string }>,
+  ): Promise<Budget[]> {
+    const { year, month, userId } = filter
+
+    const existingUser = await this.userRepository.findOneBy({ id: userId })
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID '${userId}' not found.`)
+    }
+
     const budgets = await this.budgetRepository.find({
       where: {
         year,
         month,
-        user,
+        user: { id: userId },
       },
     })
 
-    if (!budgets.length) {
+    if (budgets.length === 0) {
       throw new NotFoundException(
-        `해당 연도(${year})와 월(${month})의 예산 데이터를 찾을 수 없습니다.`,
+        `해당 일자에 대한 예산을 찾을 수 없습니다.: ${year}${
+          month ? ', month: ' + month : ''
+        }.`,
       )
     }
+
     return budgets
   }
 
@@ -146,29 +146,36 @@ export class BudgetService implements IBudgetService {
   async updateBudget(
     id: number,
     updateBudgetDto: UpdateBudgetDto,
-    user: User,
+    userId: string,
   ): Promise<Budget> {
-    const budget = await this.budgetRepository.findOneBy({
-      id,
-      user: { id: user.id },
-    })
-
-    if (!budget) {
-      throw new NotFoundException(`해당 ID(${id})의 예산을 찾을 수 없습니다.`)
-    }
     const category = await this.categoryRepository.findOneBy({
       name: updateBudgetDto.category,
     })
 
     if (!category) {
-      throw new NotFoundException('카테고리를 찾을 수 없습니다.')
+      throw new NotFoundException(
+        `해당 카테고리${updateBudgetDto.category}를 찾을 수 없습니다.`,
+      )
     }
 
-    Object.assign(budget, updateBudgetDto, { category })
+    const updatedBudgetData = {
+      ...updateBudgetDto,
+      category,
+      user: { id: userId },
+    }
 
-    return await this.budgetRepository.save(budget)
+    const budget = await this.budgetRepository.findOne({
+      where: { id, user: { id: userId } },
+    })
+
+    if (!budget) {
+      throw new NotFoundException(`해당 ID(${id})의 예산을 찾을 수 없습니다.`)
+    }
+
+    return await this.budgetRepository.save({ ...budget, ...updatedBudgetData })
   }
 
+  @Transactional()
   async deleteBudget(id: number): Promise<void> {
     const result = await this.budgetRepository.delete(id)
 
