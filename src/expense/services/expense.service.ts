@@ -1,16 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
 import { Repository } from 'typeorm'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Category } from 'src/budget/entities/category.entity'
-import { categoryEnum } from 'src/budget/types/budget.enum'
 import { Budget } from 'src/budget/entities/budget.entity'
 import { User } from 'src/user/entities/user.entity'
+import { IExpenseSerivce } from '../interfaces/expense.service.interface'
+import { Transactional } from 'typeorm-transactional'
+import { RecommendedExpense } from '../interfaces/expense-recommend.interface'
+import {
+  IBUDGET_SERVICE,
+  IEXPENSE_CALCULATION_SERVICE,
+  IEXPENSE_MESSAGE_SERVICE,
+} from 'src/common/di.tokens'
+import { IExpenseCalculationService } from '../interfaces/expense.calculation.service.interface'
+import { IExpenseMessageService } from '../interfaces/expense.message.service.interface'
+import { IBudgetService } from 'src/budget/interfaces/budget.service.interface'
 
 @Injectable()
-export class ExpenseService {
+export class ExpenseService implements IExpenseSerivce {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -20,107 +30,120 @@ export class ExpenseService {
     private expenseRepository: Repository<Expense>,
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
+    @Inject(IEXPENSE_CALCULATION_SERVICE)
+    private expenseCalculationService: IExpenseCalculationService,
+    @Inject(IEXPENSE_MESSAGE_SERVICE)
+    private expenseMessageService: IExpenseMessageService,
+    @Inject(IBUDGET_SERVICE)
+    private budgetservice: IBudgetService,
   ) {}
 
+  @Transactional()
   async createExpense(
     createExpenseDto: CreateExpenseDto,
     userId: string,
   ): Promise<Expense> {
-    const { category, ...rest } = createExpenseDto
+    const { category: categoryName, ...expenseDetails } = createExpenseDto
 
     const spentDate = new Date()
+    await this.validateUserExists(userId)
+    const category = await this.validateCategoryNameExists(categoryName)
 
-    const consumer = await this.userRepository.findOne({
-      where: { id: userId },
-    })
-
-    if (!consumer) {
-      throw new NotFoundException('유저를 찾을 수 없습니다.')
-    }
-
-    const foundCategory = await this.categoryRepository.findOne({
-      where: { name: category },
-    })
-
-    if (!foundCategory) {
-      throw new NotFoundException('카테고리를 찾을 수 없습니다.')
-    }
-
-    const expenditure = this.expenseRepository.create({
-      ...rest,
-      category: foundCategory,
+    const expense = this.expenseRepository.create({
+      ...expenseDetails,
       spentDate,
+      category,
       user: { id: userId },
     })
 
-    return this.expenseRepository.save(expenditure)
+    return await this.expenseRepository.save(expense)
   }
 
-  async getAllExpense(userId: string) {
-    return this.expenseRepository
-      .createQueryBuilder('expense')
-      .where('expense.user_id = :userId', { userId })
-      .getMany()
+  private async validateUserExists(userId: string): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id: userId })
+    if (!user) {
+      throw new NotFoundException(`유저 ${userId}를 찾을 수 없습니다.`)
+    }
+    return
   }
 
-  async getOneExpense(expenseId: number, userId: string) {
-    const expenditure = await this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.amount', 'amount')
-      .addSelect('expense.memo', 'memo')
-      .addSelect('expense.spent_date', 'spentDate')
-      .addSelect('expense.is_excluded', 'isExcluded')
-      .addSelect('expense.category_id', 'categoryId')
-      .where('expense.id = :expenseId', { expenseId })
-      .andWhere('expense.user_id = :userId', { userId })
-      .getRawOne()
+  private async validateCategoryNameExists(
+    categoryName: string,
+  ): Promise<Category> {
+    const category = await this.categoryRepository.findOneBy({
+      name: categoryName,
+    })
+    if (!category) {
+      throw new NotFoundException(
+        `카테고리 '${categoryName}'를 찾을 수 없습니다.`,
+      )
+    }
+    return category
+  }
 
-    if (!expenditure) {
+  async getAllExpense(userId: string): Promise<Expense[]> {
+    await this.validateUserExists(userId)
+
+    const expenses = await this.expenseRepository.find({
+      where: { user: { id: userId } },
+    })
+
+    if (expenses.length === 0) {
+      throw new NotFoundException(
+        `유저 ${userId})의 지출 내역이 존재하지 않습니다.`,
+      )
+    }
+    return expenses
+  }
+
+  async getOneExpense(expenseId: number, userId: string): Promise<Expense> {
+    const expense = await this.expenseRepository.findOne({
+      where: {
+        id: expenseId,
+        user: { id: userId },
+      },
+      relations: ['category'],
+    })
+
+    if (!expense) {
       throw new NotFoundException(
         `해당 ${expenseId}의 지출을 찾을 수 없습니다.`,
       )
     }
-    return expenditure
+    return expense
   }
 
+  @Transactional()
   async updateExpense(
     expenseId: number,
     updateExpenseDto: UpdateExpenseDto,
     userId: string,
   ): Promise<Expense> {
-    const { category, ...rest } = updateExpenseDto
+    await this.validateUserExists(userId)
+    const category = await this.validateCategoryNameExists(
+      updateExpenseDto.category,
+    )
 
-    const consumer = await this.userRepository.findOne({
-      where: { id: userId },
+    const updatedExpenseData = {
+      ...updateExpenseDto,
+      category: category,
+      user: { id: userId },
+    }
+
+    const expense = await this.expenseRepository.findOne({
+      where: { id: expenseId, user: { id: userId } },
     })
 
-    if (!consumer) {
-      throw new NotFoundException('유저를 찾을 수 없습니다.')
+    if (!expense) {
+      throw new NotFoundException(
+        `지출 데이터 ${expenseId}를 찾을 수 없습니다.`,
+      )
     }
 
-    const foundCategory = await this.categoryRepository.findOne({
-      where: { name: category },
+    return this.expenseRepository.save({
+      ...expense,
+      ...updatedExpenseData,
     })
-
-    if (!foundCategory) {
-      throw new NotFoundException('카테고리를 찾을 수 없습니다.')
-    }
-
-    const expenditure = await this.expenseRepository
-      .createQueryBuilder('expense')
-      .where('expense.id = :expenseId', { expenseId })
-      .andWhere('expense.user_id = :userId', { userId })
-      .leftJoinAndSelect('expense.category', 'categoyId')
-      .addSelect('expense.category_id', 'category')
-      .getOne()
-
-    if (!expenditure) {
-      throw new NotFoundException('지출 데이터를 찾을 수 없습니다.')
-    }
-
-    Object.assign(expenditure, { ...rest, category: foundCategory })
-
-    return this.expenseRepository.save(expenditure)
   }
 
   async deleteExpense(expenseId: number, userId: string) {
@@ -129,116 +152,102 @@ export class ExpenseService {
       user: { id: userId },
     })
     if (result.affected === 0) {
-      throw new NotFoundException('해당 지출을 찾을 수 없습니다.')
+      throw new NotFoundException(`해당 지출 ${expenseId}을 찾을 수 없습니다.`)
     }
   }
 
-  async recommendExpense(userId: string) {
-    const todayRecommendedExpenseByCategory = []
-    const miniBudget = 1000
+  async recommendExpense(userId: string): Promise<RecommendedExpense> {
+    await this.validateUserExists(userId)
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const year = today.getFullYear()
     const month = today.getMonth() + 1
+    const firstOfTheMonth = new Date(year, month - 1, 1) // 해당 월의 1일
     const totalDays = new Date(year, month, 0).getDate()
     const remainingDays = Math.max(totalDays - today.getDate() + 1, 1)
-    const firstOfTheMonth = new Date(today.getFullYear(), today.getMonth(), 1) // 해당 월의 1일
-    const enumLength = Object.keys(categoryEnum).length
+    const minBudget = 1000
 
-    // 이번 연도, 월에 대한 카테고리 예산
-    for (let i = 1; i < enumLength + 1; i++) {
-      const categoryId = i
-
-      const category = await this.categoryRepository.findOne({
-        where: { id: categoryId },
+    // 해당 카테고리의 예산 찾기
+    const budgets = await this.budgetservice.findBudgetByYearAndMonth(
+      year,
+      month,
+      userId,
+    )
+    // 1일부터 오늘까지 사용한 지출액
+    const expenses = await this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('category_id', 'categoryId')
+      .addSelect('SUM(expense.amount)', 'amount')
+      .where('expense.user_id = :userId', { userId })
+      .andWhere('expense.spent_date BETWEEN :firstOfTheMonth AND :today', {
+        firstOfTheMonth,
+        today,
       })
-      if (!category) {
-        throw new NotFoundException(
-          `CategoryId ${categoryId}에 해당하는 카테고리를 찾을 수 없습니다.`,
-        )
-      }
-      // 해당 카테고리의 예산 찾기
-      const budget = await this.budgetRepository
-        .createQueryBuilder('budget')
-        .where('budget.user_id = :userId', { userId })
-        .andWhere('budget.category_id = :categoryId', { categoryId })
-        .andWhere('budget.year = :year', { year })
-        .andWhere('budget.month = :month', { month })
-        .getOne()
+      .groupBy('expense.category_id')
+      .getRawMany()
 
-      if (!budget) {
-        throw new NotFoundException(
-          `${categoryId}에 대한 예산을 찾을 수 없습니다.`,
-        )
-      }
-
-      // 1일부터 오늘까지 사용한 지출액
-      let currentMonthExpenseCategoryAmount = await this.expenseRepository
-        .createQueryBuilder('expense')
-        .select('SUM(expense.amount)', 'amount')
-        .where('expense.user_id = :userId', { userId })
-        .andWhere('expense.spent_date >= :firstOfTheMonth', { firstOfTheMonth })
-        .andWhere('expense.spent_date < :today', { today })
-        .groupBy('expense.category_id')
-        .getRawOne()
-
-      if (!currentMonthExpenseCategoryAmount) {
-        throw new NotFoundException(`오늘 사용할 예산을 계산할 수 없습니다.`)
-      }
-
-      currentMonthExpenseCategoryAmount = currentMonthExpenseCategoryAmount
-        ? parseInt(currentMonthExpenseCategoryAmount.amount, 10)
-        : 0
-
+    // 지출이 undedined이면 기본값을 '0'원으로 한다.
+    const todayRecommendedExpenseByCategory = budgets.map((budget) => {
+      const expense = expenses.find(
+        (e) => e.categoryId === budget.category.id,
+      ) || { amount: '0' }
+      const currentMonthExpenseCategoryAmount = parseInt(expense.amount, 10)
       // 오늘까지 남은 예산
       let remainingBudget = budget.amount - currentMonthExpenseCategoryAmount
-      remainingBudget = remainingBudget < 0 ? 0 : remainingBudget
+      remainingBudget = Math.max(remainingBudget, 0)
 
       // 해당 카테고리에 대해 오늘 추천 지출 금액
-      let todaysRecommendedExpenditureAmount = Math.round(
-        remainingBudget / remainingDays,
-      )
+      let todaysRecommendedExpenseAmount =
+        Math.floor(remainingBudget / remainingDays / 100) * 100
 
-      // 최소 추천 지출 금액
-      if (budget.amount !== 0) {
-        todaysRecommendedExpenditureAmount =
-          todaysRecommendedExpenditureAmount < miniBudget
-            ? miniBudget
-            : todaysRecommendedExpenditureAmount
-
-        todayRecommendedExpenseByCategory.push({
-          categoryName: category.name,
-          todaysRecommendedExpenditureAmount,
-        })
+      // 예산이 0원이 아니고, 오늘까지 남은 예산이 minBudget 이하일 때만 minBudget 적용
+      if (
+        budget.amount > 0 &&
+        remainingBudget > 0 &&
+        todaysRecommendedExpenseAmount < minBudget
+      ) {
+        todaysRecommendedExpenseAmount = minBudget
       }
-    }
 
-    // 전체 예산 제외
-    const todayRecommendedExpenseByCategoryExcludingTotal =
-      todayRecommendedExpenseByCategory.slice(1)
+      return {
+        categoryName: budget.category.name,
+        todaysRecommendedExpenseAmount,
+      }
+    })
 
-    // 오늘 추천 지출 전체 금액
-    const totalDailyBudget =
-      todayRecommendedExpenseByCategoryExcludingTotal.reduce(
-        (acc, cur) => acc + cur.todaysRecommendedExpenditureAmount,
+    // 하루에 사용할 수 있는 전체 예산
+    const dailyBudgetAllowance =
+      todayRecommendedExpenseByCategory.find(
+        (item) => item.categoryName === '전체',
+      )?.todaysRecommendedExpenseAmount ?? 0
+
+    // categoryName이 '전체'인 프로퍼티는 제외
+    const filteredTodayRecommendedExpenseByCategory =
+      todayRecommendedExpenseByCategory.filter(
+        (item) => item.categoryName !== '전체',
+      )
+    // 오늘 추천 예산
+    const availableDailyBudget =
+      filteredTodayRecommendedExpenseByCategory.reduce(
+        (total, cur) => total + cur.todaysRecommendedExpenseAmount,
         0,
       )
-
-    const budgetICanUseToday =
-      todayRecommendedExpenseByCategory[0].todaysRecommendedExpenditureAmount
-
+    this.expenseMessageService.getRecommendationMessage(
+      availableDailyBudget,
+      dailyBudgetAllowance,
+    )
     let message = ''
-    if (totalDailyBudget < budgetICanUseToday) {
+    if (availableDailyBudget < dailyBudgetAllowance) {
       message = '돈을 잘 아끼고 있네요. 오늘도 무지출 챌린지 가보자!'
-    } else if (totalDailyBudget === budgetICanUseToday) {
+    } else if (availableDailyBudget === dailyBudgetAllowance) {
       message = '합리적으로 소비하고 있네요 좋습니다.'
-    } else if (totalDailyBudget > budgetICanUseToday) {
+    } else if (availableDailyBudget > dailyBudgetAllowance) {
       message = '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!'
     }
     return {
-      totalDailyBudget,
-      todayRecommendedExpenseByCategoryExcludingTotal,
+      availableDailyBudget,
+      filteredTodayRecommendedExpenseByCategory,
       message,
     }
   }
@@ -252,7 +261,7 @@ export class ExpenseService {
 
     const todaysIdealSpendingAmount = await this.recommendExpense(userId)
     const todayRecommendedExpenseByCategory =
-      todaysIdealSpendingAmount.todayRecommendedExpenseByCategoryExcludingTotal
+      todaysIdealSpendingAmount.filteredTodayRecommendedExpenseByCategory
 
     // 오늘 기준 연도, 월에 대한 카테고리별 지출 액수 조회
     const todaysSpentAmount = await this.expenseRepository

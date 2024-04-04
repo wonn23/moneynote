@@ -6,7 +6,6 @@ import {
   OneToMany,
   OneToOne,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm'
 import { Refresh } from './refresh.entity'

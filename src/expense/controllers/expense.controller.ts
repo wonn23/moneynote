@@ -1,3 +1,4 @@
+import { IEXPENSE_SERVICE } from './../../common/di.tokens'
 import {
   Controller,
   Get,
@@ -8,8 +9,8 @@ import {
   Delete,
   UseGuards,
   ParseIntPipe,
+  Inject,
 } from '@nestjs/common'
-import { ExpenseService } from '../services/expense.service'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
@@ -24,13 +25,17 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger'
+import { IExpenseSerivce } from '../interfaces/expense.service.interface'
+import { RecommendedExpense } from '../interfaces/expense-recommend.interface'
 
 @ApiTags('지출')
 @ApiBearerAuth()
 @UseGuards(AuthGuard())
 @Controller('expense')
 export class ExpenseController {
-  constructor(private readonly expenseService: ExpenseService) {}
+  constructor(
+    @Inject(IEXPENSE_SERVICE) private expenseService: IExpenseSerivce,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -120,7 +125,9 @@ export class ExpenseController {
   })
   @ApiOkResponse({ description: '추천 정보 제공 성공' })
   @ApiNotFoundResponse({ description: '유저를 찾을 수 없음' })
-  async recommendExpense(@GetUser() userId: string) {
+  async recommendExpense(
+    @GetUser() userId: string,
+  ): Promise<RecommendedExpense> {
     return await this.expenseService.recommendExpense(userId)
   }
 
