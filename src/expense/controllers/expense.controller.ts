@@ -10,6 +10,7 @@ import {
   UseGuards,
   ParseIntPipe,
   Inject,
+  Query,
 } from '@nestjs/common'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
@@ -53,13 +54,23 @@ export class ExpenseController {
 
   @Get()
   @ApiOperation({
-    summary: '모든 지출 조회',
-    description: '유저의 모든 지출 내역을 조회합니다.',
+    summary: '지정된 기간 동안의 지출 조회',
+    description: '유저가 지정한 기간 동안의 모든 지출 내역을 조회합니다.',
   })
   @ApiOkResponse({ description: '조회 성공', type: [Expense] })
   @ApiNotFoundResponse({ description: '지출 내역을 찾을 수 없음' })
-  async getAllExpense(@GetUser() userId: string): Promise<Expense[]> {
-    return this.expenseService.getAllExpense(userId)
+  async getAllExpense(
+    @GetUser() userId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ): Promise<Expense[]> {
+    const parsedStartDate = new Date(startDate)
+    const parsedEndDate = new Date(endDate)
+    return this.expenseService.getAllExpense(
+      userId,
+      parsedStartDate,
+      parsedEndDate,
+    )
   }
 
   @Get(':id')

@@ -2,14 +2,17 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
-import { Repository } from 'typeorm'
+import { Between, Repository } from 'typeorm'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Category } from 'src/budget/entities/category.entity'
 import { Budget } from 'src/budget/entities/budget.entity'
 import { User } from 'src/user/entities/user.entity'
 import { IExpenseSerivce } from '../interfaces/expense.service.interface'
 import { Transactional } from 'typeorm-transactional'
-import { RecommendedExpense } from '../interfaces/expense-recommend.interface'
+import {
+  ExpenseAmount,
+  RecommendedExpense,
+} from '../interfaces/expense-recommend.interface'
 import {
   IBUDGET_SERVICE,
   IEXPENSE_CALCULATION_SERVICE,
@@ -18,6 +21,7 @@ import {
 import { IExpenseCalculationService } from '../interfaces/expense.calculation.service.interface'
 import { IExpenseMessageService } from '../interfaces/expense.message.service.interface'
 import { IBudgetService } from 'src/budget/interfaces/budget.service.interface'
+import { GuideExpense } from '../interfaces/expense-guide.interface'
 
 @Injectable()
 export class ExpenseService implements IExpenseSerivce {
@@ -81,19 +85,18 @@ export class ExpenseService implements IExpenseSerivce {
     return category
   }
 
-  async getAllExpense(userId: string): Promise<Expense[]> {
-    await this.validateUserExists(userId)
-
-    const expenses = await this.expenseRepository.find({
-      where: { user: { id: userId } },
+  async getAllExpense(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Expense[]> {
+    return await this.expenseRepository.find({
+      where: {
+        user: { id: userId },
+        spentDate: Between(startDate, endDate),
+      },
+      relations: ['category', 'user'],
     })
-
-    if (expenses.length === 0) {
-      throw new NotFoundException(
-        `유저 ${userId})의 지출 내역이 존재하지 않습니다.`,
-      )
-    }
-    return expenses
   }
 
   async getOneExpense(expenseId: number, userId: string): Promise<Expense> {
@@ -163,58 +166,25 @@ export class ExpenseService implements IExpenseSerivce {
     today.setHours(0, 0, 0, 0)
     const year = today.getFullYear()
     const month = today.getMonth() + 1
-    const firstOfTheMonth = new Date(year, month - 1, 1) // 해당 월의 1일
-    const totalDays = new Date(year, month, 0).getDate()
-    const remainingDays = Math.max(totalDays - today.getDate() + 1, 1)
-    const minBudget = 1000
-
+    const firstOfTheMonth = new Date(year, month - 1, 1)
+    const lastOfTheMonth = new Date(year, month)
     // 해당 카테고리의 예산 찾기
-    const budgets = await this.budgetservice.findBudgetByYearAndMonth(
-      year,
-      month,
-      userId,
-    )
+    const budgets = await this.budgetservice.findBudgets(userId, year, month)
+
     // 1일부터 오늘까지 사용한 지출액
-    const expenses = await this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'amount')
-      .where('expense.user_id = :userId', { userId })
-      .andWhere('expense.spent_date BETWEEN :firstOfTheMonth AND :today', {
-        firstOfTheMonth,
+    const expenses = await this.findExpenses(
+      userId,
+      firstOfTheMonth,
+      lastOfTheMonth,
+    )
+
+    const todayRecommendedExpenseByCategory =
+      this.expenseCalculationService.calculateRecommendedExpenses(
+        budgets,
+        expenses,
         today,
-      })
-      .groupBy('expense.category_id')
-      .getRawMany()
-
-    // 지출이 undedined이면 기본값을 '0'원으로 한다.
-    const todayRecommendedExpenseByCategory = budgets.map((budget) => {
-      const expense = expenses.find(
-        (e) => e.categoryId === budget.category.id,
-      ) || { amount: '0' }
-      const currentMonthExpenseCategoryAmount = parseInt(expense.amount, 10)
-      // 오늘까지 남은 예산
-      let remainingBudget = budget.amount - currentMonthExpenseCategoryAmount
-      remainingBudget = Math.max(remainingBudget, 0)
-
-      // 해당 카테고리에 대해 오늘 추천 지출 금액
-      let todaysRecommendedExpenseAmount =
-        Math.floor(remainingBudget / remainingDays / 100) * 100
-
-      // 예산이 0원이 아니고, 오늘까지 남은 예산이 minBudget 이하일 때만 minBudget 적용
-      if (
-        budget.amount > 0 &&
-        remainingBudget > 0 &&
-        todaysRecommendedExpenseAmount < minBudget
-      ) {
-        todaysRecommendedExpenseAmount = minBudget
-      }
-
-      return {
-        categoryName: budget.category.name,
-        todaysRecommendedExpenseAmount,
-      }
-    })
+        1000,
+      )
 
     // 하루에 사용할 수 있는 전체 예산
     const dailyBudgetAllowance =
@@ -227,81 +197,61 @@ export class ExpenseService implements IExpenseSerivce {
       todayRecommendedExpenseByCategory.filter(
         (item) => item.categoryName !== '전체',
       )
-    // 오늘 추천 예산
-    const availableDailyBudget =
+    // 오늘 추천 추천 지출 총 금액
+    const availableDailyExpense =
       filteredTodayRecommendedExpenseByCategory.reduce(
         (total, cur) => total + cur.todaysRecommendedExpenseAmount,
         0,
       )
-    this.expenseMessageService.getRecommendationMessage(
-      availableDailyBudget,
+
+    const message = this.expenseMessageService.getRecommendationMessage(
+      availableDailyExpense,
       dailyBudgetAllowance,
     )
-    let message = ''
-    if (availableDailyBudget < dailyBudgetAllowance) {
-      message = '돈을 잘 아끼고 있네요. 오늘도 무지출 챌린지 가보자!'
-    } else if (availableDailyBudget === dailyBudgetAllowance) {
-      message = '합리적으로 소비하고 있네요 좋습니다.'
-    } else if (availableDailyBudget > dailyBudgetAllowance) {
-      message = '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!'
-    }
+
     return {
-      availableDailyBudget,
+      availableDailyExpense,
       filteredTodayRecommendedExpenseByCategory,
       message,
     }
   }
 
-  async guideExpense(userId: string) {
+  private async findExpenses(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<ExpenseAmount[]> {
+    const expenses = await this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('category_id', 'categoryId')
+      .addSelect('SUM(expense.amount)', 'amount')
+      .where('expense.user_id = :userId', { userId })
+      .andWhere('expense.spent_date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .groupBy('expense.category_id')
+      .getRawMany()
+
+    return expenses
+  }
+
+  async guideExpense(userId: string): Promise<GuideExpense[]> {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todaysIdealSpendingAmount = await this.recommendExpense(userId)
-    const todayRecommendedExpenseByCategory =
-      todaysIdealSpendingAmount.filteredTodayRecommendedExpenseByCategory
+    // 오늘 기준 사용했으면 적절했을 금액
+    const recommendedExpenses = await this.recommendExpense(userId)
 
-    // 오늘 기준 연도, 월에 대한 카테고리별 지출 액수 조회
-    const todaysSpentAmount = await this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'totalAmount')
-      .innerJoin('expense.category', 'category')
-      .where('expense.spent_date >= :today', { today })
-      .andWhere('expense.spent_date < :tomorrow', {
-        tomorrow,
-      })
-      .andWhere('expense.user_id = :userId', { userId })
-      .groupBy('expense.category_id')
-      .getRawMany()
+    // 오늘 기준 사용한 금액
+    const actualExpenses = await this.findExpenses(userId, today, tomorrow)
 
-    // 비율 계산
-    const calculateExpenseRatio = (recommendedExpenses, actualExpenses) => {
-      return recommendedExpenses.reduce((acc, recommendedExpense) => {
-        const actualExpense = actualExpenses.find(
-          (expense) => expense.categoryId === recommendedExpense.categoryId,
-        )
-
-        if (actualExpense) {
-          const ratio =
-            (parseInt(actualExpense.totalAmount) /
-              recommendedExpense.todaysRecommendedExpenditureAmount) *
-            100
-          acc.push({
-            categoryId: recommendedExpense.categoryId,
-            ratio: `${ratio.toFixed(2)}%`,
-          })
-        }
-
-        return acc
-      }, [])
-    }
-
-    const expenseRatios = calculateExpenseRatio(
-      todayRecommendedExpenseByCategory,
-      todaysSpentAmount,
+    const expenseRatios = this.expenseCalculationService.calculateExpenseRatios(
+      recommendedExpenses.filteredTodayRecommendedExpenseByCategory,
+      actualExpenses,
     )
 
     return expenseRatios

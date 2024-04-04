@@ -1,6 +1,6 @@
 export interface IExpenseMessageService {
   getRecommendationMessage(
-    availableDailyBudget: number,
+    availableDailyExpense: number,
     dailyBudgetAllowance: number,
   ): string
 }
