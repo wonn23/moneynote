@@ -89,36 +89,14 @@ export class BudgetController {
     return this.budgetService.designBudget(totalAmount, year, month)
   }
 
-  @Get('/year/:year')
+  @Get('/:year/:month?')
   @ApiOperation({
-    summary: '예산 조회 연도별',
-    description: '예산을 연도별로 조회할 수 있습니다.',
+    summary: '예산 조회 연도별 또는 연도와 월별',
+    description: '예산을 연도별로 또는 연도와 월로 조회할 수 있습니다.',
   })
   @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
   @ApiNotFoundResponse({
-    description: '해당 연도의 예산 데이터를 찾을 수 없습니다.',
-  })
-  @ApiParam({
-    name: 'year',
-    required: true,
-    description: '조회할 연도',
-    example: 2024,
-  })
-  async findBudgetByYear(
-    @Param('year', ParseIntPipe) year: number,
-    @GetUser() userId: string,
-  ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYear(year, userId)
-  }
-
-  @Get('/year/:year/month/:month')
-  @ApiOperation({
-    summary: '예산 조회 연도와 월별',
-    description: '예산을 연도와 월로 조회할 수 있습니다.',
-  })
-  @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
-  @ApiNotFoundResponse({
-    description: '해당 연도와 월의 예산 데이터를 찾을 수 없습니다.',
+    description: '해당 연도 또는 월의 예산 데이터를 찾을 수 없습니다.',
   })
   @ApiParam({
     name: 'year',
@@ -128,16 +106,20 @@ export class BudgetController {
   })
   @ApiParam({
     name: 'month',
-    required: true,
+    required: false,
     description: '조회할 월',
     example: 3,
   })
-  async findBudgetByYearAndMonth(
-    @Param('year', ParseIntPipe) year: number,
-    @Param('month', ParseIntPipe) month: number,
+  async findBudgets(
     @GetUser() userId: string,
+    @Param('year', ParseIntPipe) year: number,
+    @Param('month', ParseIntPipe) month?: number,
   ): Promise<Budget[]> {
-    return this.budgetService.findBudgetByYearAndMonth(year, month, userId)
+    if (month) {
+      return this.budgetService.findBudgets(userId, year, month)
+    } else {
+      return this.budgetService.findBudgets(userId, year)
+    }
   }
 
   @Put(':id')

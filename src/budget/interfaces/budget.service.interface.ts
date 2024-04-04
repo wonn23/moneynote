@@ -13,12 +13,7 @@ export interface IBudgetService {
     year: number,
     month: number,
   ): Promise<BudgetDesign[]>
-  findBudgetByYear(year: number, userId: string): Promise<Budget[]>
-  findBudgetByYearAndMonth(
-    year: number,
-    month: number,
-    userId: string,
-  ): Promise<Budget[]>
+  findBudgets(userId: string, year: number, month?: number): Promise<Budget[]>
   updateBudget(
     id: number,
     updateBudgetDto: UpdateBudgetDto,

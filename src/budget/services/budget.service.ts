@@ -101,42 +101,31 @@ export class BudgetService implements IBudgetService {
     ]
   }
 
-  async findBudgetByYear(year: number, userId: string): Promise<Budget[]> {
-    return this.findBudgets({ year, userId })
-  }
-
-  async findBudgetByYearAndMonth(
-    year: number,
-    month: number,
+  async findBudgets(
     userId: string,
+    year?: number,
+    month?: number,
   ): Promise<Budget[]> {
-    return this.findBudgets({ year, month, userId })
-  }
+    const query = this.budgetRepository
+      .createQueryBuilder('budget')
+      .leftJoinAndSelect('budget.category', 'category')
+      .where('budget.user_id = :userId', { userId })
 
-  private async findBudgets(
-    filter: Partial<{ year: number; month: number; userId: string }>,
-  ): Promise<Budget[]> {
-    const { year, month, userId } = filter
-
-    const existingUser = await this.userRepository.findOneBy({ id: userId })
-    if (!existingUser) {
-      throw new NotFoundException(`User with ID '${userId}' not found.`)
+    if (year) {
+      query.andWhere('budget.year = :year', { year })
     }
 
-    const budgets = await this.budgetRepository.find({
-      where: {
-        year,
-        month,
-        user: { id: userId },
-      },
-      relations: ['category'],
-    })
+    if (month) {
+      query.andWhere('budget.month = :month', { month })
+    }
 
-    if (budgets.length === 0) {
+    const budgets = await query.getMany()
+
+    if (!budgets.length) {
       throw new NotFoundException(
-        `해당 일자에 대한 예산을 찾을 수 없습니다.: ${year}${
-          month ? ', month: ' + month : ''
-        }.`,
+        `No budgets found for the given criteria. User ID: '${userId}'${
+          year ? `, Year: ${year}` : ''
+        }${month ? `, Month: ${month}` : ''}.`,
       )
     }
 
