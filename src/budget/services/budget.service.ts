@@ -129,6 +129,7 @@ export class BudgetService implements IBudgetService {
         month,
         user: { id: userId },
       },
+      relations: ['category'],
     })
 
     if (budgets.length === 0) {

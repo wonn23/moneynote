@@ -3,6 +3,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AuthService } from '../services/auth.service'
+import { Payload } from './jwt.payload'
 
 // refresh token 검증 전략
 @Injectable()
@@ -21,7 +22,7 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
     })
   }
 
-  async validate(req: Request, payload) {
+  async validate(req: Request, payload: Payload) {
     const accessToken = req.headers['authorization'].split(' ')[1] // client request의 헤더에서 토큰값 가져오기('Bearer ' 제거)
 
     // db에 저장되어있는 해당 유저의 refresh token 값과 비교

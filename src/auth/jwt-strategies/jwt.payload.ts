@@ -1,3 +1,3 @@
-export type Payload = {
+export interface Payload {
   userId: string
 }

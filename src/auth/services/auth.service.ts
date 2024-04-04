@@ -25,7 +25,7 @@ export class AuthService {
 
   async signIn(username: string, password: string): Promise<object> {
     try {
-      const user = await this.usersRepository.findOne({ where: { username } })
+      const user = await this.usersRepository.findOneBy({ username })
 
       if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
 
