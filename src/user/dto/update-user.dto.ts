@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 import {
   IsBoolean,
-  IsEmail,
   IsString,
   Matches,
   MaxLength,
@@ -9,15 +8,12 @@ import {
 } from 'class-validator'
 
 // 회원가입 DTO
-export class CreateUserDto {
-  @ApiProperty({ description: '이름' })
+export class UpdateUserDto {
+  @ApiProperty({ description: '계정' })
   @IsString()
+  @MinLength(4)
   @MaxLength(20)
   username: string
-
-  @ApiProperty({ description: '이메일' })
-  @IsEmail()
-  email: string
 
   @ApiProperty({ description: '비밀번호' })
   @IsString()
@@ -28,7 +24,7 @@ export class CreateUserDto {
   })
   password: string
 
-  @ApiProperty({ description: '알림 수신 동의' })
+  @ApiProperty({ description: '컨설팅 허용 여부' })
   @IsBoolean()
   consultingYn: boolean
 }

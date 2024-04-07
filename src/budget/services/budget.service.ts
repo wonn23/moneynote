@@ -13,7 +13,7 @@ import {
   BudgetAmount,
   IBudgetDesignStrategy,
 } from '../interfaces/budget-design.interface'
-import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/di.tokens'
+import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
 
 @Injectable()
 export class BudgetService implements IBudgetService {

@@ -38,9 +38,9 @@ describe('AuthController', () => {
     }
     mockAuthService.signIn.mockResolvedValue(result)
 
-    const response = await controller.signIn(mockSignInDto)
+    const response = await controller.login(mockSignInDto)
 
-    expect(authService.signIn).toBeCalledWith(
+    expect(authService.logIn).toBeCalledWith(
       mockSignInDto.username,
       mockSignInDto.password,
     )

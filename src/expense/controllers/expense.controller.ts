@@ -1,4 +1,4 @@
-import { IEXPENSE_SERVICE } from './../../common/di.tokens'
+import { IEXPENSE_SERVICE } from '../../common/utils/constants'
 import {
   Controller,
   Get,
@@ -16,7 +16,7 @@ import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
 import { AuthGuard } from '@nestjs/passport'
-import { GetUser } from 'src/auth/decorator/get-user.decorator'
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -47,7 +47,7 @@ export class ExpenseController {
   @ApiNotFoundResponse({ description: '유저 혹은 카테고리를 찾을 수 없음' })
   async create(
     @Body() createExpenseDto: CreateExpenseDto,
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
   ): Promise<Expense> {
     return this.expenseService.createExpense(createExpenseDto, userId)
   }
@@ -60,7 +60,7 @@ export class ExpenseController {
   @ApiOkResponse({ description: '조회 성공', type: [Expense] })
   @ApiNotFoundResponse({ description: '지출 내역을 찾을 수 없음' })
   async getAllExpense(
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ): Promise<Expense[]> {
@@ -88,7 +88,7 @@ export class ExpenseController {
   })
   async getOneExpense(
     @Param('id', ParseIntPipe) expenseId: number,
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
   ): Promise<Expense> {
     return this.expenseService.getOneExpense(expenseId, userId)
   }
@@ -106,7 +106,7 @@ export class ExpenseController {
   async update(
     @Param('id') expenseId: string,
     @Body() updateExpenseDto: UpdateExpenseDto,
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
   ): Promise<Expense> {
     return this.expenseService.updateExpense(
       +expenseId,
@@ -124,7 +124,7 @@ export class ExpenseController {
   @ApiNotFoundResponse({ description: '지출 또는 유저를 찾을 수 없음' })
   async delete(
     @Param('id', ParseIntPipe) expenseId: number,
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
   ): Promise<void> {
     await this.expenseService.deleteExpense(expenseId, userId)
   }
@@ -137,7 +137,7 @@ export class ExpenseController {
   @ApiOkResponse({ description: '추천 정보 제공 성공' })
   @ApiNotFoundResponse({ description: '유저를 찾을 수 없음' })
   async recommendExpense(
-    @GetUser() userId: string,
+    @CurrentUser() userId: string,
   ): Promise<RecommendedExpense> {
     return await this.expenseService.recommendExpense(userId)
   }
@@ -149,7 +149,7 @@ export class ExpenseController {
   })
   @ApiOkResponse({ description: '안내 정보 제공 성공' })
   @ApiNotFoundResponse({ description: '유저를 찾을 수 없음' })
-  async guideExpense(@GetUser() userId: string) {
+  async guideExpense(@CurrentUser() userId: string) {
     return await this.expenseService.guideExpense(userId)
   }
 
@@ -160,7 +160,7 @@ export class ExpenseController {
   })
   @ApiOkResponse({ description: '비교 성공' })
   @ApiNotFoundResponse({ description: '유저를 찾을 수 없음' })
-  async compareRatioToLastMonth(@GetUser() userId: string) {
+  async compareRatioToLastMonth(@CurrentUser() userId: string) {
     return await this.expenseService.compareRatioToLastMonth(userId)
   }
 
@@ -171,7 +171,7 @@ export class ExpenseController {
   })
   @ApiOkResponse({ description: '비교 성공' })
   @ApiNotFoundResponse({ description: '유저를 찾을 수 없음' })
-  async compareRatioToLastWeek(@GetUser() userId: string) {
+  async compareRatioToLastWeek(@CurrentUser() userId: string) {
     return await this.expenseService.compareRatioToLastWeek(userId)
   }
 }

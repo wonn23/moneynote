@@ -91,10 +91,7 @@ describe('AuthService', () => {
         .mockReturnValueOnce('access_token')
         .mockReturnValueOnce('refresh_token')
 
-      const result = await service.signIn(
-        signInDto.username,
-        signInDto.password,
-      )
+      const result = await service.logIn(signInDto.username, signInDto.password)
 
       expect(bcryptCompareSpy).toHaveBeenCalledWith(
         signInDto.password,
@@ -107,7 +104,7 @@ describe('AuthService', () => {
     it('로그인 실패: 해당 유저가 없습니다.', async () => {
       mockUserRepository.findByUsername.mockResolvedValue(null)
 
-      await expect(service.signIn('nonexistent', 'password')).rejects.toThrow(
+      await expect(service.logIn('nonexistent', 'password')).rejects.toThrow(
         '해당 유저가 없습니다.',
       )
     })
@@ -120,7 +117,7 @@ describe('AuthService', () => {
       mockUserRepository.findByUsername.mockResolvedValue(mockUser)
 
       await expect(
-        service.signIn(signInDto.username, 'wrongPassword'),
+        service.logIn(signInDto.username, 'wrongPassword'),
       ).rejects.toThrow('비밀번호가 틀렸습니다.')
     })
   })

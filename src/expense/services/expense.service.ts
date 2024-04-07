@@ -17,11 +17,14 @@ import {
   IBUDGET_SERVICE,
   IEXPENSE_CALCULATION_SERVICE,
   IEXPENSE_MESSAGE_SERVICE,
-} from 'src/common/di.tokens'
+} from 'src/common/utils/constants'
 import { IExpenseCalculationService } from '../interfaces/expense.calculation.service.interface'
 import { IExpenseMessageService } from '../interfaces/expense.message.service.interface'
 import { IBudgetService } from 'src/budget/interfaces/budget.service.interface'
-import { GuideExpense } from '../interfaces/expense-guide.interface'
+import {
+  ExpenseCompatisonResult,
+  GuideExpense,
+} from '../interfaces/expense-guide.interface'
 
 @Injectable()
 export class ExpenseService implements IExpenseSerivce {
@@ -68,7 +71,7 @@ export class ExpenseService implements IExpenseSerivce {
     if (!user) {
       throw new NotFoundException(`유저 ${userId}를 찾을 수 없습니다.`)
     }
-    return
+    return user
   }
 
   private async validateCategoryNameExists(
@@ -172,7 +175,7 @@ export class ExpenseService implements IExpenseSerivce {
     const budgets = await this.budgetservice.findBudgets(userId, year, month)
 
     // 1일부터 오늘까지 사용한 지출액
-    const expenses = await this.findExpenses(
+    const expenses = await this.fetchExpensesForPeriod(
       userId,
       firstOfTheMonth,
       lastOfTheMonth,
@@ -216,7 +219,7 @@ export class ExpenseService implements IExpenseSerivce {
     }
   }
 
-  private async findExpenses(
+  private async fetchExpensesForPeriod(
     userId: string,
     startDate: Date,
     endDate: Date,
@@ -247,7 +250,11 @@ export class ExpenseService implements IExpenseSerivce {
     const recommendedExpenses = await this.recommendExpense(userId)
 
     // 오늘 기준 사용한 금액
-    const actualExpenses = await this.findExpenses(userId, today, tomorrow)
+    const actualExpenses = await this.fetchExpensesForPeriod(
+      userId,
+      today,
+      tomorrow,
+    )
 
     const expenseRatios = this.expenseCalculationService.calculateExpenseRatios(
       recommendedExpenses.filteredTodayRecommendedExpenseByCategory,
@@ -257,84 +264,54 @@ export class ExpenseService implements IExpenseSerivce {
     return expenseRatios
   }
 
-  async compareRatioToLastMonth(userId: string) {
+  async compareRatioToLastMonth(
+    userId: string,
+  ): Promise<ExpenseCompatisonResult[]> {
     const today = new Date()
-    const dayOfMonth = today.getDate()
-
-    const thisMonthStartDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      1,
+    const thisMonthExpenses = await this.fetchExpensesForPeriod(
+      userId,
+      this.getStartOfMonth(today),
+      today,
     )
-    const todayEndDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      dayOfMonth,
+    console.log(thisMonthExpenses)
+    const lastMonthExpenses = await this.fetchExpensesForPeriod(
+      userId,
+      this.getStartOfLastMonth(today),
+      this.getEndOfLastMonth(today),
     )
+    return this.calculateComparisonResults(thisMonthExpenses, lastMonthExpenses)
+  }
 
-    const lastMonth = new Date(today)
-    lastMonth.setMonth(today.getMonth() - 1)
-    const lastMonthStartDate = new Date(
-      lastMonth.getFullYear(),
-      lastMonth.getMonth(),
-      1,
-    )
-    const lastMonthEndDate = new Date(
-      lastMonth.getFullYear(),
-      lastMonth.getMonth(),
-      dayOfMonth,
-    )
+  private getStartOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1)
+  }
 
-    const lastMonthExpenditure = this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'amount')
-      .where('expense.spent_date >= :lastMonthStartDate', {
-        lastMonthStartDate,
-      })
-      .andWhere('expense.spent_date < :lastMonthEndDate', { lastMonthEndDate })
-      .andWhere('expense.user_id = :userId', { userId })
-      .groupBy('expense.category_id')
-      .getRawMany()
+  private getStartOfLastMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth() - 1, 1)
+  }
 
-    const thisMonthExpenditure = this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'amount')
-      .where('expense.spent_date >= :thisMonthStartDate', {
-        thisMonthStartDate,
-      })
-      .andWhere('expense.spent_date < :todayEndDate', { todayEndDate })
-      .andWhere('expense.user_id = :userId', { userId })
-      .groupBy('expense.category_id')
-      .getRawMany()
+  private getEndOfLastMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 0)
+  }
 
-    const [lastMonthExpenditures, thisMonthExpenditures] = await Promise.all([
-      lastMonthExpenditure,
-      thisMonthExpenditure,
-    ])
-
-    const expenditureRatioByCategory = lastMonthExpenditures.map(
-      (lastMonth) => {
-        const thisMonth = thisMonthExpenditures.find(
-          (item) => item.categoryId === lastMonth.categoryId,
-        )
-
-        const lastMonthAmount = parseFloat(lastMonth.amount)
-        const thisMonthAmount = thisMonth ? parseFloat(thisMonth.amount) : 0
-        const ratio =
-          thisMonthAmount > 0 ? (lastMonthAmount / thisMonthAmount) * 100 : 0
-
-        return {
-          categoryId: lastMonth.categoryId,
-          lastMonthAmount,
-          thisMonthAmount,
-          ratio: ratio.toFixed(2) + '%',
-        }
-      },
-    )
-
-    return expenditureRatioByCategory
+  private calculateComparisonResults(
+    thisMonthExpenses: ExpenseAmount[],
+    lastMonthExpenses: ExpenseAmount[],
+  ): ExpenseCompatisonResult[] {
+    return thisMonthExpenses.map((expense) => {
+      const lastMonthExpense = lastMonthExpenses.find(
+        (lastMonth) => lastMonth.categoryId === expense.categoryId,
+      ) || { amount: '0' }
+      const ratio =
+        (parseFloat(expense.amount) / parseFloat(lastMonthExpense.amount)) *
+          100 || 0
+      return {
+        categoryId: expense.categoryId,
+        lastMonthAmount: parseFloat(lastMonthExpense.amount),
+        thisMonthAmount: parseFloat(expense.amount),
+        ratio: `${ratio.toFixed(2)}%`,
+      }
+    })
   }
 
   async compareRatioToLastWeek(userId: string) {
@@ -370,7 +347,6 @@ export class ExpenseService implements IExpenseSerivce {
       .groupBy('expense.category_id')
       .getRawMany()
 
-    // 각 데이터에 접근하는 쿼리는 비동기이고 독립적이므로 Promise.all() 사용
     const [lastWeekExpenditures, thisWeekExpenditures] = await Promise.all([
       lastDayExpenditure,
       thisDayExpenditure,

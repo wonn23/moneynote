@@ -12,7 +12,7 @@ import { Refresh } from './refresh.entity'
 import { Budget } from 'src/budget/entities/budget.entity'
 
 @Entity('users')
-@Unique(['username'])
+@Unique(['email'])
 export class User extends BaseEntity {
   @PrimaryColumn()
   id: string
@@ -21,12 +21,15 @@ export class User extends BaseEntity {
   username: string
 
   @Column()
+  email: string
+
+  @Column()
   password: string
 
-  @Column({ nullable: false, type: 'boolean', default: false })
+  @Column({ nullable: true, type: 'boolean', default: false })
   consultingYn: boolean
 
-  @Column({ nullable: true, type: 'varchar', default: false })
+  @Column({ nullable: true, type: 'varchar', default: '' })
   discordUrl: string
 
   @OneToOne(() => Refresh, { nullable: true })
