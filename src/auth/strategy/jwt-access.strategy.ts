@@ -1,6 +1,6 @@
 import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Payload } from './jwt.payload'
 
@@ -9,19 +9,13 @@ import { Payload } from './jwt.payload'
 export class JwtAccessTokenStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly configService: ConfigService) {
     super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // 헤더의 토큰으로부터 추출한다.
       secretOrKey: configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
+      ignoreExpiration: false, // false: 만료기간을 무시 하지 않는다.
     })
   }
 
   async validate(payload: Payload) {
-    const { userId } = payload
-
-    if (userId) {
-      return userId
-    } else {
-      throw new UnauthorizedException('접근 오류')
-    }
+    return payload.userId
   }
 }

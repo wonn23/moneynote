@@ -1,129 +1,158 @@
 import {
+  BadRequestException,
+  Inject,
   Injectable,
-  InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
-  UnprocessableEntityException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt'
 import { ConfigService } from '@nestjs/config'
-import { Refresh } from 'src/user/entities/refresh.entity'
 import { Repository } from 'typeorm'
 import { User } from 'src/user/entities/user.entity'
+import { SignInDto } from '../dto/signin.dto'
+import { ICACHE_SERVICE } from 'src/common/utils/constants'
+import { ICacheService } from 'src/cache/cache.service.interface'
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    @InjectRepository(Refresh)
-    private refreshRepository: Repository<Refresh>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    @Inject(ICACHE_SERVICE)
+    private readonly cacheService: ICacheService,
   ) {}
 
-  async signIn(username: string, password: string): Promise<object> {
-    try {
-      const user = await this.usersRepository.findOneBy({ username })
+  async logIn(signInDto: SignInDto): Promise<object> {
+    const user = await this.validateUser(signInDto)
 
-      if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
+    const accessToken = await this.generateAccessToken(user.id)
+    const refreshToken = await this.generateRefreshToken(user.id)
 
-      const isAuth = await bcrypt.compare(password, user.password)
+    await this.setRefreshToken(user.id, refreshToken)
 
-      if (!isAuth) throw new UnauthorizedException('비밀번호가 틀렸습니다.')
-
-      const payload = { userId: user.id }
-
-      const accessToken = await this.getJwtAccessToken(payload)
-      const refreshToken = await this.getJwtRefreshToken(payload)
-
-      const hashedRefreshToken = await bcrypt.hash(refreshToken, 10) // db 유출 문제를 대비해 refresh token을 hash하여 저장
-
-      const existingRefreshToken = await this.refreshRepository.findOneBy({
-        id: user.id,
-      })
-
-      if (existingRefreshToken) {
-        // 기존 리프레시 토큰이 있으면 업데이트
-        existingRefreshToken.token = hashedRefreshToken
-        await this.refreshRepository.save(existingRefreshToken)
-      } else {
-        // 새 리프레시 토큰 생성 및 저장
-        const refreshTokenEntity = new Refresh()
-        refreshTokenEntity.id = user.id
-        refreshTokenEntity.token = hashedRefreshToken
-        await this.refreshRepository.save(refreshTokenEntity)
-
-        user.refresh = refreshTokenEntity
-        await this.usersRepository.save(user)
-      }
-
-      return { accessToken, refreshToken }
-    } catch (error) {
-      if (
-        error instanceof UnprocessableEntityException ||
-        error instanceof UnauthorizedException
-      ) {
-        throw error
-      }
-      console.error('로그인 과정에서 에러 발생:', error)
-      throw new InternalServerErrorException(
-        '로그인 처리 중 에러가 발생했습니다.',
-      )
-    }
+    return { accessToken, refreshToken }
   }
 
+  // 유저 email, 비밀번호 확인
+  private async validateUser(signInDto: SignInDto): Promise<User> {
+    const { email, password } = signInDto
+    const user = await this.usersRepository.findOneBy({ email })
+
+    if (!user || (await this.verifyPassword(password, user.password))) {
+      throw new UnauthorizedException('이메일과 비밀번호를 확인해주세요.')
+    }
+    return user
+  }
+
+  async logOut(userId: string): Promise<void> {
+    await this.removeRefreshToken(userId)
+  }
+
+  // async googleLogin(req) {
+  //   if (!req.user) {
+  //     throw new UnauthorizedException('로그인 실패')
+  //   }
+  //   const user = await this.usersRepository.findOneBy(req.user.username)
+
+  //   const accessToken = await this.getJwtAccessToken(user.id)
+  //   const refreshToken = await this.createJwtRefreshToken(user.id)
+
+  //   if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
+  //   return {
+  //     message: '로그인 성공',
+  //     user: req.user,
+  //   }
+  // }
+
   // access token 생성
-  async getJwtAccessToken(payload: object): Promise<string> {
-    try {
-      const token = this.jwtService.sign(payload, {
+  private async generateAccessToken(userId: string): Promise<string> {
+    const token = this.jwtService.sign(
+      { userId },
+      {
         secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
         expiresIn: Number(
           this.configService.get('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
         ),
-      })
-      return token
-    } catch (error) {
-      console.error('JWT 토큰 생성 중 에러 발생.', error)
-      throw new InternalServerErrorException('토큰 생성 실패')
-    }
+      },
+    )
+
+    return token
   }
 
   // refresh token 생성
-  async getJwtRefreshToken(payload: object) {
-    try {
-      const token = this.jwtService.sign(payload, {
+  private async generateRefreshToken(userId: string): Promise<string> {
+    const token = this.jwtService.sign(
+      { userId },
+      {
         secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
         expiresIn: Number(
           this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
         ),
-      })
+      },
+    )
 
-      return token
-    } catch (error) {
-      console.error('JWT 토큰 생성 중 에러 발생.', error)
-      throw new InternalServerErrorException('토큰 생성 실패')
+    return token
+  }
+
+  async setRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    const ttl = this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME') // TTL 값 설정
+    await this.cacheService.set(`refreshToken:${userId}`, refreshToken, +ttl)
+  }
+
+  async removeRefreshToken(userId: string): Promise<void> {
+    await this.cacheService.del(`refreshToken:${userId}`)
+  }
+
+  async getRefreshToken(userId: string): Promise<string | null> {
+    return await this.cacheService.get<string>(`refreshToken:${userId}`)
+  }
+
+  async getAuthenticatedUser(
+    email: string,
+    plainTextPassword: string,
+  ): Promise<User> {
+    const user = await this.usersRepository.findOneBy({ email })
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 유저입니다.')
+    }
+    await this.verifyPassword(plainTextPassword, user.password)
+    user.password = undefined // 비밀번호는 안보여줌
+    return user
+  }
+
+  private async verifyPassword(
+    plainTextPassword: string,
+    hashedPassword: string,
+  ) {
+    const isPasswordMatching = await bcrypt.compare(
+      plainTextPassword,
+      hashedPassword,
+    )
+    if (!isPasswordMatching) {
+      throw new BadRequestException('잘못된 인증 정보입니다.')
     }
   }
 
   // 클라이언트의 refresh token과 해싱된 db의 refresh token 비교
-  async getUserIfRefreshTokenMatches(refreshToken: string, id: string) {
-    const userToken = await this.refreshRepository.findOneBy({ id })
+  async isRefreshTokenValid(
+    refreshToken: string,
+    userId: string,
+  ): Promise<string | null> {
+    const storedRefreshToken = await this.getRefreshToken(userId)
 
-    const isRefreshTokenMatching = await bcrypt.compare(
-      refreshToken,
-      userToken.token,
-    )
-
-    if (isRefreshTokenMatching) return userToken.id
+    if (!storedRefreshToken) {
+      return null
+    }
+    const isMatch = storedRefreshToken === refreshToken
+    return isMatch ? userId : null
   }
 
-  // 만료된 access token 재발급
-  async getNewAccessToken(id: string) {
-    const payload = { userId: id }
-    const accessToken = await this.getJwtAccessToken(payload)
-
-    return { accessToken }
+  async refreshAccessToken(userId: string): Promise<{ accessToken: string }> {
+    const newAccessToken = await this.generateAccessToken(userId)
+    return { accessToken: newAccessToken }
   }
 }
