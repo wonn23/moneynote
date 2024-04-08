@@ -1,21 +1,42 @@
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
-import { Strategy } from 'passport-google-oauth20'
+import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20'
+import { User } from 'src/user/entities/user.entity'
+import { UserService } from 'src/user/services/user.service'
 
-export class JwtGoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(configService: ConfigService) {
+@Injectable()
+export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+  constructor(
+    private configService: ConfigService,
+    private userService: UserService,
+  ) {
     super({
-      clientID: configService.get<string>('GOOGLE_AUTH_CLIENT'),
-      clientSecret: configService.get<string>('GOOGLE_AUTH_SERCRET'),
-      callbackURL: 'http://localhost:5000/authh/login/google',
+      clientID: configService.get('GOOGLE_CLIENT_ID'),
+      clientSecret: configService.get('GOOGLE_CLIENT_SECRET'),
+      callbackURL: configService.get('GOOGLE_CALLBACK_URL'),
       scope: ['email', 'profile'],
     })
   }
 
-  validate(accessToken, refreshToken, profile) {
-    return {
-      email: profile.emails[0].value,
-      name: profile.displayName,
-    }
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: Profile,
+    done: VerifyCallback,
+  ) {
+    console.log('accessToken', accessToken)
+    console.log('refreshToken', refreshToken)
+    const { id, name, emails } = profile
+
+    const providerId = id
+    const email = emails[0].value
+
+    const user: User = await this.userService.findByEmailOrSave(
+      email,
+      name.familyName + name.givenName,
+      providerId,
+    )
+    done(null, user)
   }
 }

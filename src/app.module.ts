@@ -16,9 +16,6 @@ import { RedisCacheModule } from './cache/cache.module'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // validationSchema,
-      load: [],
-      cache: true,
       envFilePath: [
         process.env.NODE_ENV === 'production'
           ? '.production.env'

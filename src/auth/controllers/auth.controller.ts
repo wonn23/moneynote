@@ -1,4 +1,4 @@
-import { Controller, Post, Get } from '@nestjs/common'
+import { Controller, Post, Get, Req, Res } from '@nestjs/common'
 import { AuthService } from '../services/auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
@@ -14,6 +14,7 @@ import { LocalAuthGuard } from '../guard/local.guard'
 import { JwtRefreshAuthGuard } from '../guard/jwt-refresh.guard'
 import { TokenResponse } from '../interfaces/token-response.interface'
 import { User } from 'src/user/entities/user.entity'
+import { GoogleAuthGuard } from '../guard/google.guard'
 
 @ApiTags('인증')
 @Controller('auth')
@@ -57,27 +58,28 @@ export class AuthController {
     return userId ? true : false
   }
 
-  // @Get('/google')
-  // @ApiOperation({
-  //   summary: '구글 로그인',
-  //   description: '구글 로그인을 통해 사용자를 인증합니다.',
-  // })
-  // @ApiResponse({ status: 200, description: 'success' })
-  // @ApiResponse({ status: 401, description: 'Unauthorized' })
-  // @UseGuards(AuthGuard('google'))
-  // async googleAuth(@Request() req) {}
+  @Get('/google/login')
+  @ApiOperation({
+    summary: '구글 로그인',
+    description: '구글 로그인을 통해 사용자를 인증합니다.',
+  })
+  @ApiResponse({ status: 200, description: 'success' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth(@Req() req) {
+    console.log('GET google/login')
+  }
 
-  // @ApiOperation({
-  //   summary: '구글 로그인 콜백',
-  //   description: '구글 로그인 후 처리를 담당합니다.',
-  // })
-  // @Get('/google/redirect')
-  // @UseGuards(AuthGuard('google'))
-  // async googleAuthRedirect(@Request() req) {
-  //   // 사용자 정보를 받아와서 추가 처리를 수행합니다.
-  //   // 예를 들어, 사용자 토큰 생성 및 리다이렉트 처리 등
-  //   return this.authService.googleLogin(req)
-  // }
+  @Get('/google/callback')
+  @ApiOperation({
+    summary: '구글 로그인 콜백',
+    description: '구글 로그인 후 처리를 담당합니다.',
+  })
+  @UseGuards(GoogleAuthGuard)
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    const { user } = req
+    return res.send(user)
+  }
 
   @Get('/refresh')
   @ApiOperation({

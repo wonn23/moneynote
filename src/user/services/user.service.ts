@@ -42,6 +42,24 @@ export class UserService {
     return { message: '회원가입에 성공했습니다' }
   }
 
+  async findByEmailOrSave(
+    email: string,
+    username: string,
+    providerId: string,
+  ): Promise<User> {
+    const user = await this.userRepository.findOneBy({ email })
+    if (user) {
+      return user
+    }
+
+    const newUser = await this.userRepository.save({
+      email,
+      username,
+      providerId,
+    })
+    return newUser
+  }
+
   @Transactional()
   async update(userId: string, updateUserDto: UpdateUserDto): Promise<void> {
     const user = await this.userRepository.findOneBy({ id: userId })
