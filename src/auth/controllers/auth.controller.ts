@@ -1,6 +1,5 @@
-import { Controller, Post, Body, ValidationPipe, Get } from '@nestjs/common'
+import { Controller, Post, Get } from '@nestjs/common'
 import { AuthService } from '../services/auth.service'
-import { SignInDto } from '../dto/signin.dto'
 import { UseGuards } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -10,9 +9,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { CurrentUser } from '../decorator/current-user.decorator'
-import { JwtAuthGuard } from '../guard/jwt-access.guard'
+import { JwtAccessAuthGuard } from '../guard/jwt-access.guard'
 import { LocalAuthGuard } from '../guard/local.guard'
 import { JwtRefreshAuthGuard } from '../guard/jwt-refresh.guard'
+import { TokenResponse } from '../interfaces/token-response.interface'
+import { User } from 'src/user/entities/user.entity'
 
 @ApiTags('인증')
 @Controller('auth')
@@ -28,12 +29,12 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'success' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
-  login(@Body(ValidationPipe) signInDto: SignInDto): Promise<object> {
-    return this.authService.logIn(signInDto)
+  login(@CurrentUser() user: User): Promise<TokenResponse> {
+    return this.authService.logIn(user)
   }
 
   @Post('/logout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAccessAuthGuard)
   @ApiOperation({
     summary: '로그아웃',
     description: 'Refresh Token을 null 처리',
@@ -41,13 +42,12 @@ export class AuthController {
   @ApiOkResponse({ description: '로그아웃 성공.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logOut(@CurrentUser() userId: string): Promise<{ message: string }> {
-    console.log(userId)
     await this.authService.logOut(userId)
     return { message: '로그아웃 성공.' }
   }
 
   @Get('/protected')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAccessAuthGuard)
   @ApiOperation({
     summary: '로그인 상태 확인',
     description: '인증된 사용자인지 확인합니다.',

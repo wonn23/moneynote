@@ -31,7 +31,7 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       payload.userId,
     )
     if (!isTokenValid) {
-      throw new UnauthorizedException('유효한 사용자가 아닙니다.')
+      throw new UnauthorizedException('유효한 토큰이 아닙니다.')
     }
 
     return payload.userId

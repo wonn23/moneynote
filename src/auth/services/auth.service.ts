@@ -3,7 +3,6 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
@@ -11,9 +10,9 @@ import * as bcrypt from 'bcrypt'
 import { ConfigService } from '@nestjs/config'
 import { Repository } from 'typeorm'
 import { User } from 'src/user/entities/user.entity'
-import { SignInDto } from '../dto/signin.dto'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
 import { ICacheService } from 'src/cache/cache.service.interface'
+import { TokenResponse } from '../interfaces/token-response.interface'
 
 @Injectable()
 export class AuthService {
@@ -26,9 +25,7 @@ export class AuthService {
     private readonly cacheService: ICacheService,
   ) {}
 
-  async logIn(signInDto: SignInDto): Promise<object> {
-    const user = await this.validateUser(signInDto)
-
+  async logIn(user: User): Promise<TokenResponse> {
     const accessToken = await this.generateAccessToken(user.id)
     const refreshToken = await this.generateRefreshToken(user.id)
 
@@ -37,19 +34,30 @@ export class AuthService {
     return { accessToken, refreshToken }
   }
 
-  // 유저 email, 비밀번호 확인
-  private async validateUser(signInDto: SignInDto): Promise<User> {
-    const { email, password } = signInDto
+  async getAuthenticatedUser(
+    email: string,
+    plainTextPassword: string,
+  ): Promise<User> {
     const user = await this.usersRepository.findOneBy({ email })
-
-    if (!user || (await this.verifyPassword(password, user.password))) {
-      throw new UnauthorizedException('이메일과 비밀번호를 확인해주세요.')
+    if (!user) {
+      throw new NotFoundException('이메일을 확인해주세요.')
     }
+    await this.verifyPassword(plainTextPassword, user.password)
+    user.password = undefined // 비밀번호는 안보여줌
     return user
   }
 
-  async logOut(userId: string): Promise<void> {
-    await this.removeRefreshToken(userId)
+  private async verifyPassword(
+    plainTextPassword: string,
+    hashedPassword: string,
+  ) {
+    const isPasswordMatching = await bcrypt.compare(
+      plainTextPassword,
+      hashedPassword,
+    )
+    if (!isPasswordMatching) {
+      throw new BadRequestException('비밀번호를 확인해주세요.')
+    }
   }
 
   // async googleLogin(req) {
@@ -69,6 +77,11 @@ export class AuthService {
   // }
 
   // access token 생성
+
+  async logOut(userId: string): Promise<void> {
+    await this.cacheService.del(`refreshToken:${userId}`)
+  }
+
   private async generateAccessToken(userId: string): Promise<string> {
     const token = this.jwtService.sign(
       { userId },
@@ -103,38 +116,8 @@ export class AuthService {
     await this.cacheService.set(`refreshToken:${userId}`, refreshToken, +ttl)
   }
 
-  async removeRefreshToken(userId: string): Promise<void> {
-    await this.cacheService.del(`refreshToken:${userId}`)
-  }
-
   async getRefreshToken(userId: string): Promise<string | null> {
     return await this.cacheService.get<string>(`refreshToken:${userId}`)
-  }
-
-  async getAuthenticatedUser(
-    email: string,
-    plainTextPassword: string,
-  ): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ email })
-    if (!user) {
-      throw new NotFoundException('존재하지 않는 유저입니다.')
-    }
-    await this.verifyPassword(plainTextPassword, user.password)
-    user.password = undefined // 비밀번호는 안보여줌
-    return user
-  }
-
-  private async verifyPassword(
-    plainTextPassword: string,
-    hashedPassword: string,
-  ) {
-    const isPasswordMatching = await bcrypt.compare(
-      plainTextPassword,
-      hashedPassword,
-    )
-    if (!isPasswordMatching) {
-      throw new BadRequestException('잘못된 인증 정보입니다.')
-    }
   }
 
   // 클라이언트의 refresh token과 해싱된 db의 refresh token 비교
