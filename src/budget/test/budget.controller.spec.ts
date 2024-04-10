@@ -1,63 +1,73 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { BudgetController } from '../controllers/budget.controller'
-import { BudgetService } from '../services/budget.service'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { categoryEnum } from '../types/budget.enum'
 import { User } from 'src/user/entities/user.entity'
 import { Budget } from '../entities/budget.entity'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { Category } from '../entities/category.entity'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { IBUDGET_SERVICE } from 'src/common/utils/constants'
+import { IBudgetService } from '../interfaces/budget.service.interface'
+import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
+import { BudgetService } from '../services/budget.service'
+import { BudgetAmount } from '../interfaces/budget-design.interface'
 
-jest.mock('@nestjs/passport', () => ({
-  AuthGuard: jest.fn().mockImplementation(() => ({
-    canActivate: jest.fn().mockReturnValue(true),
-  })),
-}))
+const mockUser = {
+  id: 'testUserId',
+  username: 'testUsername',
+  email: 'test@example.com',
+  password: 'hashedPassword',
+  providerId: 'testProviderId',
+  consultingYn: false,
+  discordUrl: '',
+} as User
+
+const mockBudget = {
+  id: 1,
+  year: 2024,
+  month: 1,
+  amount: 1000000,
+  category: {
+    id: 2,
+    name: '식사',
+  },
+} as Budget
+
+const userId = mockUser.id
 
 describe('BudgetController', () => {
-  let controller: BudgetController
-  let service: BudgetService
-
-  const mockUser = {
-    id: '1',
-    username: 'testUsername',
-    password: 'testPassword',
-    consultingYn: true,
-    discordUrl: 'http://example.com',
-  }
-
-  const mockBudgetService = {
-    createBudget: jest.fn(),
-    designBudget: jest.fn(),
-    getUserAverageRatio: jest.fn(),
-    findBudgetByYear: jest.fn(),
-    findBudgetByYearAndMonth: jest.fn(),
-    updateBudget: jest.fn(),
-    deleteBudget: jest.fn(),
-  }
+  let budgetController: BudgetController
+  let budgetService: MockService<IBudgetService>
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BudgetController],
       providers: [
         {
-          provide: BudgetService,
-          useValue: mockBudgetService,
+          provide: IBUDGET_SERVICE,
+          useValue: MockServiceFactory.getMockService(BudgetService),
         },
       ],
-    }).compile()
+    })
+      .overrideGuard(JwtAccessAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
 
-    controller = module.get<BudgetController>(BudgetController)
-    service = module.get<BudgetService>(BudgetService)
+    budgetController = module.get<BudgetController>(BudgetController)
+    budgetService = module.get(IBUDGET_SERVICE)
   })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined()
-    expect(service).toBeDefined()
+    expect(budgetController).toBeDefined()
+    expect(budgetService).toBeDefined()
   })
 
   describe('create', () => {
-    it('예산 생성 성공', async () => {
+    it('budgetService.createBudget을 부릅니다.', async () => {
       const createBudgetDto: CreateBudgetDto = {
         year: 2024,
         month: 1,
@@ -65,22 +75,16 @@ describe('BudgetController', () => {
         category: categoryEnum.food,
       }
 
-      const result = {
-        year: 2024,
-        month: 1,
-        amount: 1000000,
-        category: {
-          id: 2,
-          name: '식사',
-        },
-      }
-
+      const result = mockBudget
       jest
-        .spyOn(service, 'createBudget')
-        .mockImplementation(async () => result as Budget)
+        .spyOn(budgetService, 'createBudget')
+        .mockImplementation(async () => result)
 
-      expect(await controller.create(createBudgetDto, mockUser as User)).toBe(
-        result,
+      await budgetController.create(createBudgetDto, userId)
+
+      expect(budgetService.createBudget).toHaveBeenCalledWith(
+        createBudgetDto,
+        userId,
       )
     })
   })
@@ -90,123 +94,121 @@ describe('BudgetController', () => {
       const totalAmount = 1000000
       const year = 2024
       const month = 1
-      const expectedDesignResult = [
+      const expectedDesignResult: BudgetAmount[] = [
         {
-          category: '교통',
-          budget: 120000,
+          categoryName: '교통',
+          budgetAmount: 120000,
         },
         {
-          category: '문화생활',
-          budget: 220000,
+          categoryName: '문화생활',
+          budgetAmount: 220000,
         },
         {
-          category: '식사',
-          budget: 320000,
+          categoryName: '식사',
+          budgetAmount: 320000,
         },
         {
-          category: '주거/통신',
-          budget: 210000,
+          categoryName: '주거/통신',
+          budgetAmount: 210000,
         },
         {
-          category: '기타',
-          budget: 130000,
+          categoryName: '기타',
+          budgetAmount: 130000,
         },
       ]
 
       jest
-        .spyOn(service, 'designBudget')
+        .spyOn(budgetService, 'designBudget')
         .mockResolvedValue(expectedDesignResult)
 
-      expect(await controller.design(totalAmount, year, month)).toBe(
-        expectedDesignResult,
+      const result = await budgetController.design(totalAmount, year, month)
+
+      expect(budgetService.designBudget).toHaveBeenCalledWith(
+        totalAmount,
+        year,
+        month,
       )
+      expect(result).toEqual(expectedDesignResult)
     })
   })
 
-  describe('findBudgetByYear', () => {
-    it('연도로 예산 조회 성공', async () => {
+  describe('findBudgets', () => {
+    it('연도별 예산 조회 성공', async () => {
       const year = 2024
-      const expectedBudgets: Budget[] = [
-        {
-          id: 32,
-          year: 2024,
-          month: 1,
-          amount: 3000000,
-          category: { id: 2 } as Category,
-          user: { id: 'user-id' } as User,
-        } as Budget,
-      ]
-
-      jest.spyOn(service, 'findBudgetByYear').mockResolvedValue(expectedBudgets)
-
-      expect(await controller.findBudgetByYear(year, mockUser as User)).toBe(
-        expectedBudgets,
-      )
-    })
-  })
-
-  describe('findBudgetByYearAndMonth', () => {
-    it('연월로 예산 조회 성공', async () => {
-      const year = 2024
-      const month = 1
-      const expectedBudgets: Budget[] = [
-        {
-          id: 32,
-          year: 2024,
-          month: 1,
-          amount: 3000000,
-          category: { id: 2 } as Category,
-          user: { id: 'user-id' } as User,
-        } as Budget,
-      ]
+      const month = undefined
+      const expectedBudgets: Budget[] = [mockBudget]
 
       jest
-        .spyOn(service, 'findBudgetByYearAndMonth')
+        .spyOn(budgetService, 'findBudgets')
         .mockResolvedValue(expectedBudgets)
 
-      expect(
-        await controller.findBudgetByYearAndMonth(
-          year,
-          month,
-          mockUser as User,
-        ),
-      ).toBe(expectedBudgets)
+      const result = await budgetController.findBudgets(userId, year, month)
+
+      expect(budgetService.findBudgets).toHaveBeenCalledWith(userId, year)
+      expect(result).toEqual(expectedBudgets)
+    })
+
+    it('연도와 월별 예산 조회 성공', async () => {
+      const year = 2024
+      const month = 1
+      const expectedBudgets: Budget[] = [mockBudget]
+
+      jest
+        .spyOn(budgetService, 'findBudgets')
+        .mockResolvedValue(expectedBudgets)
+
+      const reuslt = await budgetController.findBudgets(userId, year, month)
+
+      expect(budgetService.findBudgets).toHaveBeenCalledWith(
+        userId,
+        year,
+        month,
+      )
+      expect(reuslt).toEqual(expectedBudgets)
     })
   })
 
   describe('update', () => {
     it('예산 수정 성공', async () => {
-      const id = '1'
       const updateBudgetDto: UpdateBudgetDto = {
         amount: 200000,
         category: categoryEnum.food,
       }
       const expectedUpdatedBudget: Budget = {
-        id: 32,
-        year: 2024,
-        month: 1,
-        amount: 3000000,
-        category: { id: 2, name: '식사' } as Category,
-        user: { id: 'user-id' } as User,
+        id: mockBudget.id,
+        year: mockBudget.year,
+        month: mockBudget.month,
+        amount: updateBudgetDto.amount,
+        category: { id: 2, name: updateBudgetDto.category } as Category,
+        user: mockUser,
       } as Budget
 
       jest
-        .spyOn(service, 'updateBudget')
+        .spyOn(budgetService, 'updateBudget')
         .mockResolvedValue(expectedUpdatedBudget)
 
-      expect(
-        await controller.update(id, updateBudgetDto, mockUser as User),
-      ).toBe(expectedUpdatedBudget)
+      const result = await budgetController.update(
+        mockBudget.id,
+        updateBudgetDto,
+        userId,
+      )
+
+      expect(budgetService.updateBudget).toHaveBeenCalledWith(
+        mockBudget.id,
+        updateBudgetDto,
+        userId,
+      )
+      expect(result).toEqual(expectedUpdatedBudget)
     })
   })
 
   describe('delete', () => {
     it('예산 삭제 성공', async () => {
-      const id = '1'
+      jest.spyOn(budgetService, 'deleteBudget').mockResolvedValue(undefined)
 
-      jest.spyOn(service, 'deleteBudget').mockResolvedValue(undefined)
+      await budgetController.delete(mockBudget.id)
 
-      await expect(controller.delete(id)).resolves.not.toThrow()
+      expect(budgetService.deleteBudget).toHaveBeenCalledWith(mockBudget.id)
     })
   })
 })

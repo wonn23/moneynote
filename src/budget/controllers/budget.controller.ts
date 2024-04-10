@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
-import { AuthGuard } from '@nestjs/passport'
 import { Budget } from '../entities/budget.entity'
 import {
   ApiBearerAuth,
@@ -28,11 +27,12 @@ import {
 import { CurrentUser } from 'src/common/decorator/current-user.decorator'
 import { IBUDGET_SERVICE } from 'src/common/utils/constants'
 import { IBudgetService } from '../interfaces/budget.service.interface'
-import { BudgetDesign } from '../interfaces/budget-design.interface'
+import { BudgetAmount } from '../interfaces/budget-design.interface'
+import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('예산')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAccessAuthGuard)
 @Controller('budgets')
 export class BudgetController {
   constructor(@Inject(IBUDGET_SERVICE) private budgetService: IBudgetService) {}
@@ -56,7 +56,6 @@ export class BudgetController {
     @Body() createBudgetDto: CreateBudgetDto,
     @CurrentUser() userId: string,
   ): Promise<Budget> {
-    console.log(userId)
     return this.budgetService.createBudget(createBudgetDto, userId)
   }
 
@@ -86,7 +85,7 @@ export class BudgetController {
     @Body('totalAmount') totalAmount: number,
     @Body('year') year: number,
     @Body('month') month: number,
-  ): Promise<BudgetDesign[]> {
+  ): Promise<BudgetAmount[]> {
     return this.budgetService.designBudget(totalAmount, year, month)
   }
 
