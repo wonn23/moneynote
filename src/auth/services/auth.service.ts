@@ -5,20 +5,18 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { InjectRepository } from '@nestjs/typeorm'
 import * as bcrypt from 'bcrypt'
 import { ConfigService } from '@nestjs/config'
-import { Repository } from 'typeorm'
 import { User } from 'src/user/entities/user.entity'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
 import { ICacheService } from 'src/cache/cache.service.interface'
 import { TokenResponse } from '../interfaces/token-response.interface'
+import { UserRepository } from 'src/user/user.repository'
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private usersRepository: UserRepository,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     @Inject(ICACHE_SERVICE)
@@ -60,28 +58,11 @@ export class AuthService {
     }
   }
 
-  // async googleLogin(req) {
-  //   if (!req.user) {
-  //     throw new UnauthorizedException('로그인 실패')
-  //   }
-  //   const user = await this.usersRepository.findOneBy(req.user.username)
-
-  //   const accessToken = await this.getJwtAccessToken(user.id)
-  //   const refreshToken = await this.createJwtRefreshToken(user.id)
-
-  //   if (!user) throw new UnprocessableEntityException('해당 유저가 없습니다.')
-  //   return {
-  //     message: '로그인 성공',
-  //     user: req.user,
-  //   }
-  // }
-
-  // access token 생성
-
   async logOut(userId: string): Promise<void> {
     await this.cacheService.del(`refreshToken:${userId}`)
   }
 
+  // access token 생성
   private async generateAccessToken(userId: string): Promise<string> {
     const token = this.jwtService.sign(
       { userId },
@@ -111,12 +92,15 @@ export class AuthService {
     return token
   }
 
-  async setRefreshToken(userId: string, refreshToken: string): Promise<void> {
+  private async setRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<void> {
     const ttl = this.configService.get('JWT_REFRESH_TOKEN_EXPIRATION_TIME') // TTL 값 설정
     await this.cacheService.set(`refreshToken:${userId}`, refreshToken, +ttl)
   }
 
-  async getRefreshToken(userId: string): Promise<string | null> {
+  private async getRefreshToken(userId: string): Promise<string | null> {
     return await this.cacheService.get<string>(`refreshToken:${userId}`)
   }
 

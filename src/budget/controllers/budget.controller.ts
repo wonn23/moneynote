@@ -25,7 +25,7 @@ import {
   ApiProperty,
   ApiTags,
 } from '@nestjs/swagger'
-import { CurrentUser } from 'src/auth/decorator/current-user.decorator'
+import { CurrentUser } from 'src/common/decorator/current-user.decorator'
 import { IBUDGET_SERVICE } from 'src/common/utils/constants'
 import { IBudgetService } from '../interfaces/budget.service.interface'
 import { BudgetDesign } from '../interfaces/budget-design.interface'

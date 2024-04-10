@@ -1,141 +1,214 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { AuthService } from '../services/auth.service'
-import { Refresh } from 'src/user/entities/refresh.entity'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { getRepositoryToken } from '@nestjs/typeorm'
-import { SignInDto } from '../dto/signin.dto'
 import { User } from 'src/user/entities/user.entity'
-
-jest.mock('bcrypt', () => ({
-  compare: jest.fn(),
-  hash: jest.fn(),
-}))
+import {
+  MockRepository,
+  MockRepositoryFactory,
+} from 'src/common/utils/mock-repository.factory'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { ICacheService } from 'src/cache/cache.service.interface'
+import { ICACHE_SERVICE } from 'src/common/utils/constants'
+import { BadRequestException, NotFoundException } from '@nestjs/common'
+import { CacheService } from 'src/cache/cache.service'
+import { UserRepository } from 'src/user/user.repository'
 
 describe('AuthService', () => {
-  let service: AuthService
-
-  const mockUserRepository = {
-    findByUsername: jest.fn(),
-    save: jest.fn(),
-  }
-
-  const mockRefreshRepository = {
-    findOneBy: jest.fn(),
-    save: jest.fn(),
-  }
-
-  const mockConfigService = {
-    get: jest.fn((key: string) => {
-      if (key === 'JWT_ACCESS_TOKEN_SECRET') return 'access_token_secret'
-      if (key === 'JWT_REFRESH_TOKEN_SECRET') return 'refresh_token_secret'
-      if (key === 'JWT_ACCESS_TOKEN_EXPIRATION_TIME') return '3600'
-      if (key === 'JWT_REFRESH_TOKEN_EXPIRATION_TIME') return '36000'
-    }),
-  }
-
-  const mockJwtService = {
-    sign: jest.fn(),
-  }
-
-  const signInDto: SignInDto = {
-    username: 'testUser',
-    password: 'testPassword',
-  }
+  let authService: AuthService
+  let userRepository: MockRepository<UserRepository>
+  let jwtService: MockService<JwtService>
+  let configService: MockService<ConfigService>
+  let cacheService: MockService<ICacheService>
 
   const mockUser = {
-    id: 1,
-    username: 'testUser',
+    id: 'testUserId',
+    username: 'testUsername',
+    email: 'test@example.com',
     password: 'hashedPassword',
-    consultingYn: true,
-    discordUrl: false,
-  }
+    providerId: 'testProviderId',
+    consultingYn: false,
+    discordUrl: '',
+  } as User
+
+  const userId = mockUser.id
+  const mockRefreshToken = 'mockRefreshToken'
+  const newAccessToken = 'newAccessToken'
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: JwtService, useValue: mockJwtService },
-        { provide: User, useValue: mockUserRepository },
         {
-          provide: getRepositoryToken(Refresh),
-          useValue: mockRefreshRepository,
+          provide: getRepositoryToken(UserRepository),
+          useValue: MockRepositoryFactory.getMockRepository(UserRepository),
         },
-        { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: ConfigService,
+          useValue: MockServiceFactory.getMockService(ConfigService),
+        },
+        {
+          provide: JwtService,
+          useValue: MockServiceFactory.getMockService(JwtService),
+        },
+        {
+          provide: ICACHE_SERVICE,
+          useValue: MockServiceFactory.getMockService(CacheService),
+        },
       ],
     }).compile()
 
-    service = module.get<AuthService>(AuthService)
+    authService = module.get<AuthService>(AuthService)
+    userRepository = module.get(getRepositoryToken(UserRepository))
+    cacheService = module.get(ICACHE_SERVICE)
+    jwtService = module.get(JwtService)
+    configService = module.get(ConfigService)
+
+    jwtService.sign.mockImplementation((payload, options) => {
+      if (options.secret === 'access-secret') {
+        return 'access-token'
+      } else if (options.secret === 'refresh-secret') {
+        return 'refresh-token'
+      }
+    })
+
+    configService.get.mockImplementation((key: string) => {
+      switch (key) {
+        case 'JWT_ACCESS_TOKEN_SECRET':
+          return 'access-secret'
+        case 'JWT_ACCESS_TOKEN_EXPIRATION_TIME':
+          return '3600'
+        case 'JWT_REFRESH_TOKEN_SECRET':
+          return 'refresh-secret'
+        case 'JWT_REFRESH_TOKEN_EXPIRATION_TIME':
+          return '7200'
+        default:
+          return null
+      }
+    })
   })
 
   afterEach(() => {
+    jest.clearAllMocks()
+    jest.resetAllMocks()
     jest.restoreAllMocks()
   })
 
   it('should define UserService', () => {
-    expect(service).toBeDefined()
+    expect(authService).toBeDefined()
   })
 
-  describe('signIn', () => {
-    it('로그인 성공', async () => {
+  describe('logIn', () => {
+    it('로그인 성공 시, 액세스 토큰과 리프레시 토큰 반환', async () => {
+      const result = await authService.logIn(mockUser)
+
+      expect(result).toEqual({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      })
+      expect(jwtService.sign).toHaveBeenCalledTimes(2)
+      expect(cacheService.set).toHaveBeenCalledWith(
+        `refreshToken:${mockUser.id}`,
+        'refresh-token',
+        expect.any(Number),
+      )
+    })
+  })
+
+  describe('getAuthenticatedUser', () => {
+    it('유저가 존재하고 비밀번호가 일치하면 유저 객체 반환', async () => {
+      userRepository.findOneBy.mockResolvedValue(mockUser)
       const bcryptCompareSpy = jest
         .spyOn(bcrypt, 'compare')
         .mockImplementation(() => Promise.resolve(true))
 
-      const accessToken = 'access_token'
-      const refreshToken = 'refresh_token'
+      const result = await authService.getAuthenticatedUser(
+        mockUser.email,
+        'validPassword',
+      )
 
-      mockUserRepository.findByUsername.mockResolvedValue(mockUser)
-      mockJwtService.sign
-        .mockReturnValueOnce('access_token')
-        .mockReturnValueOnce('refresh_token')
-
-      const result = await service.logIn(signInDto.username, signInDto.password)
-
+      expect(userRepository.findOneBy).toHaveBeenCalledWith({
+        email: 'test@example.com',
+      })
       expect(bcryptCompareSpy).toHaveBeenCalledWith(
-        signInDto.password,
-        mockUser.password,
+        'validPassword',
+        'hashedPassword',
       )
-      expect(result).toEqual({ accessToken, refreshToken })
-      expect(mockJwtService.sign).toHaveBeenCalledTimes(2)
+      expect(result).toEqual({ ...mockUser, password: undefined })
     })
 
-    it('로그인 실패: 해당 유저가 없습니다.', async () => {
-      mockUserRepository.findByUsername.mockResolvedValue(null)
+    it('사용자가 없을 경우 NotFoundException 발생', async () => {
+      userRepository.findOneBy.mockResolvedValue(undefined)
 
-      await expect(service.logIn('nonexistent', 'password')).rejects.toThrow(
-        '해당 유저가 없습니다.',
-      )
+      await expect(
+        authService.getAuthenticatedUser('nonexistent@example.com', 'password'),
+      ).rejects.toThrow(NotFoundException)
     })
 
-    it('로그인 실패: 비밀번호가 틀렸습니다.', async () => {
+    it('잘못된 비밀번호로 인증 시 BadRequestException 발생', async () => {
+      userRepository.findOneBy.mockResolvedValue(mockUser)
       jest
         .spyOn(bcrypt, 'compare')
         .mockImplementation(() => Promise.resolve(false))
 
-      mockUserRepository.findByUsername.mockResolvedValue(mockUser)
-
       await expect(
-        service.logIn(signInDto.username, 'wrongPassword'),
-      ).rejects.toThrow('비밀번호가 틀렸습니다.')
+        authService.getAuthenticatedUser(mockUser.email, 'wrongPassword'),
+      ).rejects.toThrow(BadRequestException)
     })
   })
 
-  describe('getJwtAccessToken', () => {
-    it('access token 생성 성공', async () => {
-      const payload = { userId: '1' }
-      const accessToken = 'access_token'
+  describe('logOut', () => {
+    it('로그아웃 시, 리프레시 토큰이 캐시에서 삭제되어야 함', async () => {
+      await authService.logOut(userId)
 
-      mockJwtService.sign.mockReturnValue(accessToken)
+      expect(cacheService.del).toHaveBeenCalledWith(`refreshToken:${userId}`)
+    })
+  })
 
-      const result = await service.getJwtAccessToken(payload)
-
-      expect(result).toBe(accessToken)
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
-        payload,
-        expect.anything(),
+  describe('isRefreshTokenValid', () => {
+    it('토큰이 일치하면 사용자 ID 반환', async () => {
+      cacheService.get.mockResolvedValue(mockRefreshToken)
+      const result = await authService.isRefreshTokenValid(
+        mockRefreshToken,
+        userId,
       )
+
+      expect(result).toEqual(userId)
+      expect(cacheService.get).toHaveBeenCalledWith(`refreshToken:${userId}`)
+    })
+
+    it('저장된 토큰이 없으면 null 반환', async () => {
+      cacheService.get.mockResolvedValue(null)
+
+      const result = await authService.isRefreshTokenValid(
+        mockRefreshToken,
+        userId,
+      )
+      expect(result).toBeNull()
+    })
+
+    it('토큰이 일치하지 않으면 null 반환', async () => {
+      cacheService.get.mockResolvedValue('differentToken')
+      const result = await authService.isRefreshTokenValid(
+        mockRefreshToken,
+        userId,
+      )
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('refreshAccessToken', () => {
+    it('새 액세스 토큰 반환', async () => {
+      jwtService.sign.mockReturnValue(newAccessToken)
+
+      const result = await authService.refreshAccessToken(userId)
+      expect(result).toEqual({ accessToken: newAccessToken })
+      expect(jwtService.sign).toHaveBeenCalledTimes(1)
     })
   })
 })

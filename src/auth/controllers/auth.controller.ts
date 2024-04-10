@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Req, Res } from '@nestjs/common'
+import { Controller, Post, Get, Req } from '@nestjs/common'
 import { AuthService } from '../services/auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
@@ -8,7 +8,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
-import { CurrentUser } from '../decorator/current-user.decorator'
+import { CurrentUser } from '../../common/decorator/current-user.decorator'
 import { JwtAccessAuthGuard } from '../guard/jwt-access.guard'
 import { LocalAuthGuard } from '../guard/local.guard'
 import { JwtRefreshAuthGuard } from '../guard/jwt-refresh.guard'
@@ -30,7 +30,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'success' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
-  login(@CurrentUser() user: User): Promise<TokenResponse> {
+  logIn(@CurrentUser() user: User): Promise<TokenResponse> {
     return this.authService.logIn(user)
   }
 
@@ -54,21 +54,21 @@ export class AuthController {
     description: '인증된 사용자인지 확인합니다.',
   })
   @ApiOkResponse({ description: '인증된 사용자입니다.' })
-  isLoggedIn(@CurrentUser() userId: string): boolean {
+  async isLoggedIn(@CurrentUser() userId: string): Promise<boolean> {
     return userId ? true : false
   }
 
-  @Get('/google/login')
-  @ApiOperation({
-    summary: '구글 로그인',
-    description: '구글 로그인을 통해 사용자를 인증합니다.',
-  })
-  @ApiResponse({ status: 200, description: 'success' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @UseGuards(GoogleAuthGuard)
-  async googleAuth(@Req() req) {
-    console.log('GET google/login')
-  }
+  // @Get('/google/login')
+  // @ApiOperation({
+  //   summary: '구글 로그인',
+  //   description: '구글 로그인을 통해 사용자를 인증합니다.',
+  // })
+  // @ApiResponse({ status: 200, description: 'success' })
+  // @ApiResponse({ status: 401, description: 'Unauthorized' })
+  // @UseGuards(GoogleAuthGuard)
+  // async googleAuth(@Req() req) {
+  //   console.log('GET google/login')
+  // }
 
   @Get('/google/callback')
   @ApiOperation({
@@ -76,9 +76,8 @@ export class AuthController {
     description: '구글 로그인 후 처리를 담당합니다.',
   })
   @UseGuards(GoogleAuthGuard)
-  async googleAuthRedirect(@Req() req, @Res() res) {
-    const { user } = req
-    return res.send(user)
+  async googleAuthRedirect(@CurrentUser() user: User): Promise<User> {
+    return user
   }
 
   @Get('/refresh')
@@ -92,7 +91,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
   @UseGuards(JwtRefreshAuthGuard)
-  refreshAccessToken(
+  async refreshAccessToken(
     @CurrentUser() userId: string,
   ): Promise<{ accessToken: string }> {
     return this.authService.refreshAccessToken(userId)
