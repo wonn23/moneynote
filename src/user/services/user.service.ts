@@ -5,19 +5,15 @@ import {
 } from '@nestjs/common'
 import { User } from '../entities/user.entity'
 import * as bcrypt from 'bcryptjs'
-import { Repository } from 'typeorm'
 import { Transactional } from 'typeorm-transactional'
-import { InjectRepository } from '@nestjs/typeorm'
 import { CreateUser } from '../interface/user.interface'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { UpdateUserDto } from '../dto/update-user.dto'
+import { UserRepository } from '../user.repository'
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-  ) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   @Transactional()
   async register(createUserDto: CreateUserDto): Promise<CreateUser> {
