@@ -3,47 +3,88 @@ import { UserController } from '../controllers/user.controller'
 import { UserService } from '../services/user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { ForbiddenException } from '@nestjs/common'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { UpdateUserDto } from '../dto/update-user.dto'
 
 describe('UserController', () => {
-  let controller: UserController
-
-  const mockUserService = {
-    signUp: jest.fn(),
-  }
-
-  const mockUserDto: CreateUserDto = {
-    username: 'wonn22',
-    password: '1q2w3e4r5t!',
-    consultingYn: true,
-  }
+  let userController: UserController
+  let userService: MockService<UserService>
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
-      providers: [{ provide: UserService, useValue: mockUserService }],
+      providers: [
+        {
+          provide: UserService,
+          useValue: MockServiceFactory.getMockService(UserService),
+        },
+      ],
     }).compile()
 
-    controller = module.get<UserController>(UserController)
+    userController = module.get<UserController>(UserController)
+    userService = module.get(UserService)
   })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined()
+    expect(userController).toBeDefined()
   })
 
-  it('회원가입', async () => {
-    await controller.signUp(mockUserDto)
+  describe('register', () => {
+    const mockUserDto: CreateUserDto = {
+      username: 'testUsername',
+      email: 'test@example.com',
+      password: 'validPassword',
+      consultingYn: false,
+    }
 
-    expect(mockUserService.signUp).toBeCalledWith(
-      mockUserDto.username,
-      mockUserDto.password,
-      mockUserDto.consultingYn,
-    )
+    it('register', async () => {
+      const message = { message: '회원가입에 성공했습니다.' }
+      userService.register.mockResolvedValue(message)
+
+      const result = await userController.register(mockUserDto)
+
+      expect(userService.register).toHaveBeenCalledWith(mockUserDto)
+      expect(result).toEqual(message)
+    })
+
+    it('회원가입: 이미 존재하는 유저 이름', async () => {
+      userService.register.mockRejectedValue(new ForbiddenException())
+
+      await expect(userController.register(mockUserDto)).rejects.toThrow(
+        ForbiddenException,
+      )
+    })
   })
 
-  it('회원가입: 이미 존재하는 유저 이름', async () => {
-    mockUserService.signUp.mockRejectedValue(new ForbiddenException())
-    await expect(controller.signUp(mockUserDto)).rejects.toThrow(
-      ForbiddenException,
-    )
+  describe('update', () => {
+    it('should update user info', async () => {
+      const userId = 'testUserId'
+      const updateUserDto: UpdateUserDto = {
+        username: 'newUsername',
+        password: 'newPassword',
+        consultingYn: true,
+      }
+      userService.update.mockResolvedValue(undefined)
+
+      await expect(
+        userController.update(userId, updateUserDto),
+      ).resolves.not.toThrow()
+
+      expect(userService.update).toHaveBeenCalledWith(userId, updateUserDto)
+    })
+  })
+
+  describe('delete', () => {
+    it('should delete a user', async () => {
+      const userId = 'testUserId'
+      userService.delete.mockResolvedValue(undefined)
+
+      await expect(userController.delete(userId)).resolves.not.toThrow()
+
+      expect(userService.delete).toHaveBeenCalledWith(userId)
+    })
   })
 })

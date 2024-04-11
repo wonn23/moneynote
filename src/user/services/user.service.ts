@@ -35,7 +35,7 @@ export class UserService {
       consultingYn,
     })
 
-    return { message: '회원가입에 성공했습니다' }
+    return { message: '회원가입에 성공했습니다.' }
   }
 
   async findByEmailOrSave(
@@ -53,6 +53,7 @@ export class UserService {
       username,
       providerId,
     })
+
     return newUser
   }
 
@@ -69,7 +70,7 @@ export class UserService {
     })
   }
 
-  async delete(userId: string) {
+  async delete(userId: string): Promise<void> {
     const result = await this.userRepository.delete({
       id: userId,
     })
