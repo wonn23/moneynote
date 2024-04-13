@@ -3,7 +3,7 @@ import {
   IBUDGET_SERVICE,
 } from 'src/common/utils/constants'
 import { BudgetService } from './services/budget.service'
-import { DefaultBudgetDesignStrategy } from './services/default-budget-design.strategy'
+import { DefaultBudgetDesignStrategy } from './services/default-budget-design-strategy'
 
 export const BudgetProvider = [
   {

@@ -66,7 +66,7 @@ export class DefaultBudgetDesignStrategy implements IBudgetDesignStrategy {
         // 10% 이하 예산은 '기타'로 누적
         otherTotalBudget += curr.budgetAmount
       } else {
-        total.push({ curr })
+        total.push(curr)
       }
       return total
     }, [])

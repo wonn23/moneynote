@@ -1,11 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
-import { Repository } from 'typeorm'
 import { Budget } from '../entities/budget.entity'
-import { User } from 'src/user/entities/user.entity'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Category } from '../entities/category.entity'
 import { Transactional } from 'typeorm-transactional'
 import { IBudgetService } from '../interfaces/budget.service.interface'
 import {
@@ -14,16 +10,14 @@ import {
   IBudgetDesignStrategy,
 } from '../interfaces/budget-design.interface'
 import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
+import { BudgetRepository } from '../budget.repository'
+import { CategoryRepository } from '../category.repository'
 
 @Injectable()
 export class BudgetService implements IBudgetService {
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    @InjectRepository(Budget)
-    private budgetRepository: Repository<Budget>,
-    @InjectRepository(Category)
-    private categoryRepository: Repository<Category>,
+    private readonly budgetRepository: BudgetRepository,
+    private readonly categoryRepository: CategoryRepository,
     @Inject(IBUDGET_DESIGN_STRAGTEGY)
     private readonly budgetDesignStrategy: IBudgetDesignStrategy,
   ) {}
@@ -39,7 +33,7 @@ export class BudgetService implements IBudgetService {
       name: categoryName,
     })
 
-    if (!categoryName) {
+    if (!category) {
       throw new NotFoundException(
         `카테고리 '${categoryName}'를 찾을 수 없습니다.`,
       )
@@ -63,7 +57,10 @@ export class BudgetService implements IBudgetService {
     return this.budgetDesignStrategy.designBudget(ratios, totalAmount)
   }
 
-  async calculateCategoryRatios(year: number, month: number): Promise<Ratio[]> {
+  private async calculateCategoryRatios(
+    year: number,
+    month: number,
+  ): Promise<Ratio[]> {
     // 카테고리별 평균 amount 조회 및 전체 amount 계산
     const categoryAmounts = await this.budgetRepository
       .createQueryBuilder('budget')
@@ -106,24 +103,20 @@ export class BudgetService implements IBudgetService {
     year?: number,
     month?: number,
   ): Promise<Budget[]> {
-    const query = this.budgetRepository
-      .createQueryBuilder('budget')
-      .leftJoinAndSelect('budget.category', 'category')
-      .where('budget.user_id = :userId', { userId })
-
-    if (year) {
-      query.andWhere('budget.year = :year', { year })
+    const whereCondition = {
+      user: { id: userId },
+      ...(year && { year }),
+      ...(month && { month }),
     }
 
-    if (month) {
-      query.andWhere('budget.month = :month', { month })
-    }
-
-    const budgets = await query.getMany()
+    const budgets = await this.budgetRepository.find({
+      where: whereCondition,
+      relations: ['category'],
+    })
 
     if (!budgets.length) {
       throw new NotFoundException(
-        `No budgets found for the given criteria. User ID: '${userId}'${
+        `예산을 찾을 수 없습니다. User ID: '${userId}'${
           year ? `, Year: ${year}` : ''
         }${month ? `, Month: ${month}` : ''}.`,
       )
@@ -165,7 +158,6 @@ export class BudgetService implements IBudgetService {
     return await this.budgetRepository.save({ ...budget, ...updatedBudgetData })
   }
 
-  @Transactional()
   async deleteBudget(id: number): Promise<void> {
     const result = await this.budgetRepository.delete(id)
 

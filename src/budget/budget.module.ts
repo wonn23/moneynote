@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common'
 import { BudgetController } from './controllers/budget.controller'
-import { Budget } from './entities/budget.entity'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { Category } from './entities/category.entity'
 import { PassportModule } from '@nestjs/passport'
-import { User } from 'src/user/entities/user.entity'
 import { BudgetProvider } from './budget.provider'
+import { TypeOrmExModule } from 'src/common/decorator/typeorm-ex.module'
+import { BudgetRepository } from './budget.repository'
+import { CategoryRepository } from './category.repository'
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([Budget, Category, User]),
+    TypeOrmExModule.forCustomRepository([BudgetRepository, CategoryRepository]),
   ],
   controllers: [BudgetController],
   providers: [...BudgetProvider],
