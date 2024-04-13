@@ -6,63 +6,53 @@ import { categoryEnum } from 'src/budget/types/budget.enum'
 import { Expense } from '../entities/expense.entity'
 import { InternalServerErrorException } from '@nestjs/common'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { IExpenseSerivce } from '../interfaces/expense.service.interface'
+import { IEXPENSE_SERVICE } from 'src/common/utils/constants'
 
-jest.mock('@nestjs/passport', () => ({
-  AuthGuard: jest.fn().mockImplementation(() => ({
-    canActivate: jest.fn().mockReturnValue(true),
-  })),
-}))
-
+const mockUser = {
+  id: 'testUserId',
+  username: 'testUsername',
+  email: 'test@example.com',
+  password: 'hashedPassword',
+  consultingYn: false,
+  discordUrl: '',
+}
+const userId = mockUser.id
 const mockExpense = {
   id: 1,
   amount: 10000,
   memo: '점심식사',
   isExcluded: false,
   cateogory: {
-    id: 1,
+    id: 2,
     name: categoryEnum.food,
   },
-  user: { id: 'userId' },
+  user: mockUser,
   createdAt: new Date(),
   updatedAt: new Date(),
 }
 
-const createExpenseDto: CreateExpenseDto = {
-  amount: 10000,
-  memo: '저녁 식사',
-  isExcluded: false,
-  category: categoryEnum.food,
-}
-
 describe('ExpenseController', () => {
-  let controller: ExpenseController
-  let service: ExpenseService
+  let expenseController: ExpenseController
+  let expenseService: MockService<IExpenseSerivce>
 
   beforeEach(async () => {
-    const mockExpenseService = {
-      createExpense: jest.fn().mockResolvedValue(mockExpense),
-      getAllExpense: jest.fn(),
-      getOneExpense: jest.fn(),
-      updateExpense: jest.fn(),
-      deleteExpense: jest.fn(),
-      recommendExpense: jest.fn(),
-      guideExpense: jest.fn(),
-      compareRatioToLastMonth: jest.fn(),
-      compareRatioToLastWeek: jest.fn(),
-    }
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ExpenseController],
       providers: [
         {
-          provide: ExpenseService,
-          useValue: mockExpenseService,
+          provide: IEXPENSE_SERVICE,
+          useValue: MockServiceFactory.getMockService(ExpenseService),
         },
       ],
     }).compile()
 
-    controller = module.get<ExpenseController>(ExpenseController)
-    service = module.get<ExpenseService>(ExpenseService)
+    expenseController = module.get<ExpenseController>(ExpenseController)
+    expenseService = module.get(IEXPENSE_SERVICE)
   })
 
   afterEach(() => {
@@ -70,40 +60,54 @@ describe('ExpenseController', () => {
   })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined()
-    expect(service).toBeDefined()
+    expect(expenseController).toBeDefined()
+    expect(expenseService).toBeDefined()
   })
 
   describe('create', () => {
+    const createExpenseDto: CreateExpenseDto = {
+      amount: 10000,
+      memo: '저녁 식사',
+      isExcluded: false,
+      category: categoryEnum.food,
+    }
+
     it('지출 생성에 성공했습니다.', async () => {
-      const userId = 'userId'
+      expenseService.createExpense.mockResolvedValue(mockExpense)
 
-      const createExpenseSpy = jest.spyOn(service, 'createExpense')
+      const result = await expenseController.create(createExpenseDto, userId)
 
-      const result = await controller.create(createExpenseDto, userId)
-
-      expect(createExpenseSpy).toHaveBeenCalledWith(createExpenseDto, userId)
+      expect(expenseService.createExpense).toHaveBeenCalledWith(
+        createExpenseDto,
+        userId,
+      )
       expect(result).toEqual(mockExpense)
     })
 
     it('지출 생성에 실패했습니다.', async () => {
       const userId = 'userId'
       jest
-        .spyOn(service, 'createExpense')
+        .spyOn(expenseService, 'createExpense')
         .mockRejectedValue(new InternalServerErrorException())
 
-      await expect(controller.create(createExpenseDto, userId)).rejects.toThrow(
-        InternalServerErrorException,
-      )
+      await expect(
+        expenseController.create(createExpenseDto, userId),
+      ).rejects.toThrow(InternalServerErrorException)
     })
   })
 
   describe('getAllExpense', () => {
     it('지출 목록 조회에 성공했습니다.', async () => {
       const result = [new Expense(), new Expense()]
-      jest.spyOn(service, 'getAllExpense').mockResolvedValue(result)
+      jest.spyOn(expenseService, 'getAllExpense').mockResolvedValue(result)
 
-      expect(await controller.getAllExpense('userId')).toBe(result)
+      expect(
+        await expenseController.getAllExpense(
+          userId,
+          '2024-04-01',
+          '2024-04-30',
+        ),
+      ).toEqual(result)
     })
   })
 
@@ -112,10 +116,15 @@ describe('ExpenseController', () => {
       const expenseId = 1
       const userId = 'userId'
       const result = new Expense()
-      jest.spyOn(service, 'getOneExpense').mockResolvedValue(result)
+      jest.spyOn(expenseService, 'getOneExpense').mockResolvedValue(result)
 
-      expect(await controller.getOneExpense(expenseId, userId)).toBe(result)
-      expect(service.getOneExpense).toHaveBeenCalledWith(expenseId, userId)
+      expect(await expenseController.getOneExpense(expenseId, userId)).toEqual(
+        result,
+      )
+      expect(expenseService.getOneExpense).toHaveBeenCalledWith(
+        expenseId,
+        userId,
+      )
     })
   })
 
@@ -125,19 +134,21 @@ describe('ExpenseController', () => {
         amount: 2000,
       }
       const result = new Expense()
-      jest.spyOn(service, 'updateExpense').mockResolvedValue(result)
+      jest.spyOn(expenseService, 'updateExpense').mockResolvedValue(result)
 
-      expect(await controller.update('1', updateExpenseDto, 'userId')).toBe(
-        result,
-      )
+      expect(
+        await expenseController.update('1', updateExpenseDto, 'userId'),
+      ).toEqual(result)
     })
   })
 
   describe('delete', () => {
     it('지출 삭제에 성공했습니다.', async () => {
-      jest.spyOn(service, 'deleteExpense').mockResolvedValue(undefined)
+      jest.spyOn(expenseService, 'deleteExpense').mockResolvedValue(undefined)
 
-      await expect(controller.delete(1, 'userId')).resolves.toBeUndefined()
+      await expect(
+        expenseController.delete(1, 'userId'),
+      ).resolves.toBeUndefined()
     })
   })
   describe('recommendExpense', () => {
@@ -147,34 +158,40 @@ describe('ExpenseController', () => {
         todayRecommendedExpenseByCategoryExcludingTotal: [
           {
             categoryId: 2,
+            categoryName: '식사',
             todaysRecommendedExpenditureAmount: 10357,
           },
           {
             categoryId: 3,
+            categoryName: '교통',
             todaysRecommendedExpenditureAmount: 1429,
           },
           {
             categoryId: 4,
+            categoryName: '문화생활',
             todaysRecommendedExpenditureAmount: 5000,
           },
           {
             categoryId: 5,
+            categoryName: '주거/통신',
             todaysRecommendedExpenditureAmount: 13929,
           },
           {
             categoryId: 6,
+            categoryName: '생활용품',
             todaysRecommendedExpenditureAmount: 3214,
           },
           {
             categoryId: 7,
-            todaysRecommendedExpenditureAmount: 1000,
+            categoryName: '기타',
+            todaysRecommendedExpenditureAmount: 0,
           },
         ],
         message: '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!',
       }
-      jest.spyOn(service, 'recommendExpense').mockResolvedValue(result)
+      jest.spyOn(expenseService, 'recommendExpense').mockResolvedValue(result)
 
-      expect(await controller.recommendExpense('userId')).toBe(result)
+      expect(await expenseController.recommendExpense('userId')).toEqual(result)
     })
   })
 
@@ -207,9 +224,9 @@ describe('ExpenseController', () => {
           degreeOfDanger: 'NaN',
         },
       ]
-      jest.spyOn(service, 'guideExpense').mockResolvedValue(result)
+      jest.spyOn(expenseService, 'guideExpense').mockResolvedValue(result)
 
-      expect(await controller.guideExpense('userId')).toBe(result)
+      expect(await expenseController.guideExpense('userId')).toEqual(result)
     })
   })
 
@@ -241,9 +258,13 @@ describe('ExpenseController', () => {
           ratio: '500.00%',
         },
       ]
-      jest.spyOn(service, 'compareRatioToLastMonth').mockResolvedValue(result)
+      jest
+        .spyOn(expenseService, 'compareRatioToLastMonth')
+        .mockResolvedValue(result)
 
-      expect(await controller.compareRatioToLastMonth('userId')).toBe(result)
+      expect(await expenseController.compareRatioToLastMonth('userId')).toEqual(
+        result,
+      )
     })
   })
 
@@ -275,9 +296,13 @@ describe('ExpenseController', () => {
           ratio: '0.00%',
         },
       ]
-      jest.spyOn(service, 'compareRatioToLastWeek').mockResolvedValue(result)
+      jest
+        .spyOn(expenseService, 'compareRatioToLastWeek')
+        .mockResolvedValue(result)
 
-      expect(await controller.compareRatioToLastWeek('userId')).toBe(result)
+      expect(await expenseController.compareRatioToLastWeek('userId')).toEqual(
+        result,
+      )
     })
   })
 })

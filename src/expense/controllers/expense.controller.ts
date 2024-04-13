@@ -15,8 +15,7 @@ import {
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
-import { AuthGuard } from '@nestjs/passport'
-import { CurrentUser } from 'src/auth/decorator/current-user.decorator'
+import { CurrentUser } from 'src/common/decorator/current-user.decorator'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -28,10 +27,11 @@ import {
 } from '@nestjs/swagger'
 import { IExpenseSerivce } from '../interfaces/expense.service.interface'
 import { RecommendedExpense } from '../interfaces/expense-recommend.interface'
+import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('지출')
 @ApiBearerAuth()
-@UseGuards(AuthGuard())
+@UseGuards(JwtAccessAuthGuard)
 @Controller('expense')
 export class ExpenseController {
   constructor(

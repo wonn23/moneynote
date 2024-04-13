@@ -1,75 +1,111 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ExpenseService } from '../services/expense.service'
 import { getRepositoryToken } from '@nestjs/typeorm'
-import { Expense } from '../entities/expense.entity'
-import { Category } from 'src/budget/entities/category.entity'
-import { Repository } from 'typeorm'
-import { Budget } from 'src/budget/entities/budget.entity'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { NotFoundException } from '@nestjs/common'
 import { User } from 'src/user/entities/user.entity'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
+import {
+  MockRepository,
+  MockRepositoryFactory,
+} from 'src/common/utils/mock-repository.factory'
+import { UserRepository } from 'src/user/user.repository'
+import { BudgetRepository } from 'src/budget/budget.repository'
+import { CategoryRepository } from 'src/budget/category.repository'
+import { ExpenseRepository } from '../expense.repository'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { IExpenseMessageService } from '../interfaces/expense.message.service.interface'
+import { IExpenseCalculationService } from '../interfaces/expense.calculation.service.interface'
+import { IBudgetService } from 'src/budget/interfaces/budget.service.interface'
+import {
+  IBUDGET_SERVICE,
+  IEXPENSE_CALCULATION_SERVICE,
+  IEXPENSE_MESSAGE_SERVICE,
+} from 'src/common/utils/constants'
+import { ExpenseCalculationService } from '../services/expense.calculation.service'
+import { BudgetService } from 'src/budget/services/budget.service'
+import { ExpenseMessageService } from '../services/expense.message.service'
+import { Category } from 'src/budget/entities/category.entity'
+import { Expense } from '../entities/expense.entity'
 
-const mockUserRepository = {
-  findOne: jest.fn(),
-}
-const mockBudgetRepository = {
-  createQueryBuilder: jest.fn(),
-}
-const mockExpenseRepository = {
-  create: jest.fn(),
-  save: jest.fn(),
-  findOne: jest.fn(),
-  delete: jest.fn(),
-  createQueryBuilder: jest.fn(),
-}
+jest.mock('typeorm-transactional', () => ({
+  Transactional: () => () => ({}),
+}))
 
-const mockCategoryRepository = {
-  findOne: jest.fn(),
+const mockUser = {
+  id: 'testUserId',
+  username: 'testUsername',
+  email: 'test@example.com',
+  password: 'hashedPassword',
+  providerId: 'testProviderId',
+  consultingYn: false,
+  discordUrl: '',
+} as User
+
+const userId = mockUser.id
+
+const mockCategory = {
+  id: 2,
+  name: '식사',
 }
 
 describe('ExpenseService', () => {
-  let service: ExpenseService
-  let userRepository: Repository<User>
-  let budgetRepository: Repository<Budget>
-  let expenseRepository: Repository<Expense>
-  let categoryRepository: Repository<Category>
+  let expenseService: ExpenseService
+  let userRepository: MockRepository<UserRepository>
+  let expenseRepository: MockRepository<ExpenseRepository>
+  let categoryRepository: MockRepository<CategoryRepository>
+  let expenseCalculationService: MockService<IExpenseCalculationService>
+  let expenseMesaageService: MockService<IExpenseMessageService>
+  let budgetService: MockService<IBudgetService>
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExpenseService,
         {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepository,
+          provide: getRepositoryToken(UserRepository),
+          useValue: MockRepositoryFactory.getMockRepository(UserRepository),
         },
         {
-          provide: getRepositoryToken(Budget),
-          useValue: mockBudgetRepository,
+          provide: getRepositoryToken(BudgetRepository),
+          useValue: MockRepositoryFactory.getMockRepository(BudgetRepository),
         },
         {
-          provide: getRepositoryToken(Expense),
-          useValue: mockExpenseRepository,
+          provide: getRepositoryToken(ExpenseRepository),
+          useValue: MockRepositoryFactory.getMockRepository(ExpenseRepository),
         },
         {
-          provide: getRepositoryToken(Category),
-          useValue: mockCategoryRepository,
+          provide: getRepositoryToken(CategoryRepository),
+          useValue: MockRepositoryFactory.getMockRepository(CategoryRepository),
+        },
+        {
+          provide: IEXPENSE_CALCULATION_SERVICE,
+          useValue: MockServiceFactory.getMockService(
+            ExpenseCalculationService,
+          ),
+        },
+        {
+          provide: IEXPENSE_MESSAGE_SERVICE,
+          useValue: MockServiceFactory.getMockService(ExpenseMessageService),
+        },
+        {
+          provide: IBUDGET_SERVICE,
+          useValue: MockServiceFactory.getMockService(BudgetService),
         },
       ],
     }).compile()
 
-    service = module.get<ExpenseService>(ExpenseService)
-    userRepository = module.get<UserRepository>(UserRepository)
-    budgetRepository = module.get<Repository<Budget>>(
-      getRepositoryToken(Budget),
-    )
-    expenseRepository = module.get<Repository<Expense>>(
-      getRepositoryToken(Expense),
-    )
-    categoryRepository = module.get<Repository<Category>>(
-      getRepositoryToken(Category),
-    )
+    expenseService = module.get<ExpenseService>(ExpenseService)
+    userRepository = module.get(getRepositoryToken(UserRepository))
+    expenseRepository = module.get(getRepositoryToken(ExpenseRepository))
+    categoryRepository = module.get(getRepositoryToken(CategoryRepository))
+    expenseCalculationService = module.get(IEXPENSE_CALCULATION_SERVICE)
+    expenseMesaageService = module.get(IEXPENSE_MESSAGE_SERVICE)
+    budgetService = module.get(IBUDGET_SERVICE)
   })
 
   afterEach(() => {
@@ -77,121 +113,99 @@ describe('ExpenseService', () => {
   })
 
   it('should be defined', () => {
-    expect(service).toBeDefined()
+    expect(expenseService).toBeDefined()
     expect(userRepository).toBeDefined()
-    expect(budgetRepository).toBeDefined()
     expect(expenseRepository).toBeDefined()
     expect(categoryRepository).toBeDefined()
   })
 
   describe('createExpense', () => {
+    const createExpenseDto: CreateExpenseDto = {
+      amount: 5000,
+      memo: '점심 식사',
+      isExcluded: false,
+      category: categoryEnum.food,
+    }
+
     it('지출 생성에 성공했습니다.', async () => {
-      const userId = 'userId'
-      const createExpenseDto: CreateExpenseDto = {
-        amount: 5000,
-        memo: 'Test expense',
-        isExcluded: false,
-        category: categoryEnum.food,
-      }
-      const spentDate = new Date()
-      // 필요한 객체를 찾을 수 있도록 모의설정 하였음
-      mockUserRepository.findOne.mockResolvedValue({ id: userId })
-      mockCategoryRepository.findOne.mockResolvedValue({
+      const userId = mockUser.id
+
+      const category: Category = {
+        id: 2,
+        name: '식사',
+      } as Category
+
+      const expectedExpense: Expense = {
+        ...createExpenseDto,
+        category,
+        user: { id: userId },
+        id: expect.any(Number),
+      } as Expense
+
+      userRepository.findOneBy.mockResolvedValue(mockUser)
+      categoryRepository.findOneBy.mockResolvedValue(category)
+      expenseRepository.create.mockResolvedValue(expectedExpense)
+      expenseRepository.save.mockResolvedValue(expectedExpense)
+
+      const result = await expenseService.createExpense(
+        createExpenseDto,
+        userId,
+      )
+
+      expect(userRepository.findOneBy).toHaveBeenCalledWith({ id: userId })
+      expect(categoryRepository.findOneBy).toHaveBeenCalledWith({
         name: createExpenseDto.category,
       })
-
-      const expectedExpense = new Expense()
-      Object.assign(expectedExpense, createExpenseDto, { user: { id: userId } })
-
-      jest.spyOn(expenseRepository, 'create').mockReturnValue(expectedExpense)
-      jest.spyOn(expenseRepository, 'save').mockResolvedValue(expectedExpense)
-
-      const result = await service.createExpense(createExpenseDto, userId)
-
-      expect(result).toEqual(expectedExpense)
       expect(expenseRepository.create).toHaveBeenCalledWith({
         ...createExpenseDto,
-        spentDate,
-        category: { name: createExpenseDto.category },
+        category,
+        spentDate: expect.any(Date),
         user: { id: userId },
       })
-      expect(expenseRepository.save).toHaveBeenCalledWith(expectedExpense)
+      expect(expenseRepository.save).toHaveBeenCalled()
+      expect(result).toEqual(expectedExpense)
     })
 
     it('유저를 찾지 못해서 NotFoundException 에러가 발생했습니다.', async () => {
-      const createExpenseDto: CreateExpenseDto = {
-        amount: 10000,
-        memo: 'Test expense',
-        isExcluded: false,
-        category: categoryEnum.food,
-      }
-      jest.spyOn(userRepository, 'findOne').mockResolvedValueOnce(null)
+      userRepository.findOneBy.mockResolvedValueOnce(null)
 
       await expect(
-        service.createExpense(createExpenseDto, 'userId'),
+        expenseService.createExpense(createExpenseDto, userId),
       ).rejects.toThrow(NotFoundException)
     })
 
     it('해당 카테고리를 찾지 못해서 NotFoundException 에러가 발생했습니다.', async () => {
-      const createExpenseDto: CreateExpenseDto = {
-        amount: 10000,
-        memo: 'Test expense',
-        isExcluded: false,
-        category: categoryEnum.food,
-      }
-      jest
-        .spyOn(userRepository, 'findOne')
-        .mockResolvedValueOnce({ id: 'userId' } as User)
-      jest.spyOn(categoryRepository, 'findOne').mockResolvedValueOnce(null)
+      userRepository.findOneBy.mockResolvedValue(mockUser)
+      categoryRepository.findOneBy.mockResolvedValue(null)
 
       await expect(
-        service.createExpense(createExpenseDto, 'userId'),
+        expenseService.createExpense(createExpenseDto, userId),
       ).rejects.toThrow(NotFoundException)
     })
   })
 
   describe('getAllExpense', () => {
     it('모든 지출 조회에 성공했습니다.', async () => {
-      const userId = 'user-id'
-      const mockExpenses = [
-        {
-          id: 1,
-          amount: 5000,
-          memo: null,
-          spentDate: '2024-02-29T15:00:00.000Z',
-          isExcluded: false,
-          createdAt: '2024-03-03T17:21:09.992Z',
-          updatedAt: '2024-03-03T17:21:09.992Z',
-          deletedAt: null,
-        },
-        {
-          id: 2,
-          amount: 10000,
-          memo: null,
-          spentDate: '2024-02-29T15:00:00.000Z',
-          isExcluded: false,
-          createdAt: '2024-03-03T17:21:09.992Z',
-          updatedAt: '2024-03-03T17:21:09.992Z',
-          deletedAt: null,
-        },
-      ]
+      const mockExpenses = [new Expense(), new Expense()]
+      const startDate = new Date()
+      const endDate = new Date()
 
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockExpenses),
-      })
+      expenseRepository.find.mockResolvedValue(mockExpenses)
 
-      const result = await service.getAllExpense(userId)
+      const result = await expenseService.getAllExpense(
+        userId,
+        startDate,
+        endDate,
+      )
 
+      expect(expenseRepository.find).toHaveBeenCalled()
       expect(result).toEqual(mockExpenses)
-      expect(mockExpenseRepository.createQueryBuilder).toHaveBeenCalled()
     })
   })
 
   describe('getOneExpense', () => {
     it('지출 상세 조회에 성공했습니다.', async () => {
       const expenseId = 1
-      const userId = 'userId'
       const expectedExpense = {
         amount: 5000,
         memo: '점심 식사',
@@ -199,19 +213,12 @@ describe('ExpenseService', () => {
         isExcluded: false,
         categoryId: 2,
       }
+      expenseRepository.findOne.mockResolvedValue(expectedExpense)
 
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue(expectedExpense),
-      })
+      const result = await expenseService.getOneExpense(expenseId, userId)
 
-      const result = await service.getOneExpense(expenseId, userId)
-
+      expect(expenseRepository.findOne).toHaveBeenCalled()
       expect(result).toEqual(expectedExpense)
-      expect(mockExpenseRepository.createQueryBuilder).toHaveBeenCalled()
     })
   })
 
@@ -222,11 +229,11 @@ describe('ExpenseService', () => {
         amount: 3000,
         memo: '저녁 식사',
         isExcluded: false,
-        category: categoryEnum.food,
+        category: categoryEnum.curtureLife,
       }
-      const userId = 'userId'
+
       const mockExpense = {
-        id: 2,
+        id: 1,
         amount: 5000,
         memo: '점심 식사',
         spentDate: '2024-03-01T15:00:00.000Z',
@@ -240,97 +247,141 @@ describe('ExpenseService', () => {
         },
       }
 
-      mockUserRepository.findOne.mockResolvedValue({ id: userId })
-      mockCategoryRepository.findOne.mockResolvedValue({
-        name: updateExpenseDto.category,
-      })
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockExpense),
-      })
+      const updatedExpense = {
+        id: 1,
+        amount: 5000,
+        memo: '저녁 식사',
+        spentDate: '2024-03-01T15:00:00.000Z',
+        isExcluded: false,
+        createdAt: '2024-03-03T17:21:09.992Z',
+        updatedAt: '2024-03-06T11:20:10.545Z',
+        deletedAt: null,
+        category: {
+          id: 4,
+          name: '문화생활',
+        },
+      }
 
-      Object.assign(mockExpense, updateExpenseDto)
+      userRepository.findOneBy.mockResolvedValue(mockUser)
+      categoryRepository.findOneBy.mockResolvedValue(mockCategory)
+      expenseRepository.findOne.mockResolvedValue(mockExpense)
+      expenseRepository.save.mockResolvedValue(updatedExpense)
 
-      mockExpenseRepository.save.mockResolvedValue(mockExpense)
-
-      const result = await service.updateExpense(
+      const result = await expenseService.updateExpense(
         expenseId,
         updateExpenseDto,
         userId,
       )
 
-      expect(result).toEqual(mockExpense)
-      expect(expenseRepository.save).toHaveBeenCalledWith(mockExpense)
+      expect(expenseRepository.save).toHaveBeenCalled()
+      expect(result).toEqual(updatedExpense)
     })
   })
 
   describe('deleteExpense', () => {
     it('지출 삭제에 성공했습니다.', async () => {
       const expenseId = 1
-      const userId = 'userId'
 
-      mockExpenseRepository.delete.mockResolvedValue({ affected: 1 })
+      expenseRepository.delete.mockResolvedValue({ affected: 1 })
 
-      await service.deleteExpense(expenseId, userId)
+      await expenseService.deleteExpense(expenseId, userId)
 
-      expect(mockExpenseRepository.delete).toHaveBeenCalledWith({
+      expect(expenseRepository.delete).toHaveBeenCalledWith({
         id: expenseId,
         user: { id: userId },
       })
     })
 
     it('삭제하려는 지출을 찾을 수 없을 때 NotFoundException을 발생시킵니다.', async () => {
-      jest
-        .spyOn(mockExpenseRepository, 'delete')
-        .mockResolvedValue({ affected: 0 }) // 삭제된 레코드가 없음
+      const expenseId = 999
 
-      const expenseId = 999 // 존재하지 않는 ID
-      const userId = 'user-id'
+      expenseRepository.delete.mockResolvedValue({ affected: 0 })
 
-      await expect(service.deleteExpense(expenseId, userId)).rejects.toThrow(
-        NotFoundException,
-      )
+      await expect(
+        expenseService.deleteExpense(expenseId, userId),
+      ).rejects.toThrow(NotFoundException)
     })
   })
 
   describe('recommendExpense', () => {
     it('오늘의 지출 추천 계산에 성공했습니다.', async () => {
-      const userId = 'userId'
-      const categoryId = 1
-      const budgetAmount = 30000
-      const spentAmount = 15000
-      const mockBudget = {
-        categoryId,
-        amount: budgetAmount,
-      }
-      const mockExpense = {
-        amount: spentAmount,
-      }
+      const mockBudgets = [
+        {
+          categoryId: 1,
+          amount: 10000,
+        },
+      ]
 
-      mockBudgetRepository.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockBudget),
-      })
+      const mockExpenses = [
+        {
+          id: 1,
+          amount: 10000,
+          memo: '점심식사',
+          spentDate: new Date(),
+          isExcluded: false,
+        },
+      ]
 
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
+      const mockResults = [
+        {
+          categoryId: 1,
+          categoryName: '전체',
+          todaysRecommendedExpenseAmount: 150,
+        },
+        {
+          categoryId: 2,
+          categoryName: '식사',
+          todaysRecommendedExpenseAmount: 100,
+        },
+        {
+          categoryId: 3,
+          categoryName: '교통',
+          todaysRecommendedExpenseAmount: 50,
+        },
+      ]
+
+      const mockQueryBuilder = {
         select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue(mockExpense),
+        getRawMany: jest.fn(),
+      }
+
+      userRepository.findOneBy.mockResolvedValue(mockUser)
+      budgetService.findBudgets.mockResolvedValue(mockBudgets)
+      expenseRepository.createQueryBuilder.mockImplementation(
+        () => mockQueryBuilder,
+      )
+      mockQueryBuilder.getRawMany.mockResolvedValue(mockExpenses)
+      expenseCalculationService.calculateRecommendedExpenses.mockReturnValue(
+        mockResults,
+      )
+      expenseMesaageService.getRecommendationMessage.mockReturnValue(
+        '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!',
+      )
+
+      const result = await expenseService.recommendExpense(userId)
+
+      expect(budgetService.findBudgets).toHaveBeenCalledWith(
+        userId,
+        expect.any(Number),
+        expect.any(Number),
+      )
+      expect(
+        expenseCalculationService.calculateRecommendedExpenses,
+      ).toHaveBeenCalledWith(mockBudgets, mockExpenses, expect.any(Date), 1000)
+      expect(result).toEqual({
+        availableDailyExpense: expect.any(Number),
+        filteredTodayRecommendedExpenseByCategory: expect.any(Array),
+        message: expect.any(String),
       })
-
-      const result = await service.recommendExpense(userId)
-
-      expect(result).toEqual(
+      expect(result.filteredTodayRecommendedExpenseByCategory).toContainEqual(
         expect.objectContaining({
-          totalDailyBudget: expect.any(Number),
-          todayRecommendedExpenseByCategoryExcludingTotal: expect.any(Array),
-          message: expect.any(String),
+          categoryId: expect.any(Number),
+          categoryName: expect.any(String),
+          todaysRecommendedExpenseAmount: expect.any(Number),
         }),
       )
     })
@@ -338,48 +389,48 @@ describe('ExpenseService', () => {
 
   describe('guideExpense', () => {
     it('오늘의 지출 안내 계산에 성공했습니다.', async () => {
-      const userId = 'userId'
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-
       const mockRecommendedExpense = {
-        totalDailyBudget: 86263,
-        todayRecommendedExpenseByCategoryExcludingTotal: [
+        availableDailyExpense: 86263,
+        filteredTodayRecommendedExpenseByCategory: [
           {
             categoryId: 2,
-            todaysRecommendedExpenditureAmount: 36000,
+            categoryName: '식사',
+            todaysRecommendedExpenseAmount: 36000,
           },
           {
             categoryId: 3,
-            todaysRecommendedExpenditureAmount: 4421,
+            categoryName: '교통',
+            todaysRecommendedExpenseAmount: 4421,
           },
           {
             categoryId: 4,
-            todaysRecommendedExpenditureAmount: 36000,
+            categoryName: '문화생활',
+            todaysRecommendedExpenseAmount: 36000,
           },
           {
             categoryId: 5,
-            todaysRecommendedExpenditureAmount: 4421,
+            categoryName: '주거/통신',
+            todaysRecommendedExpenseAmount: 4421,
           },
           {
             categoryId: 6,
-            todaysRecommendedExpenditureAmount: 4421,
+            categoryName: '생활용품',
+            todaysRecommendedExpenseAmount: 4421,
           },
           {
             categoryId: 7,
-            todaysRecommendedExpenditureAmount: 1000,
+            categoryName: '기타',
+            todaysRecommendedExpenseAmount: 0,
           },
         ],
         message: '지출이 큽니다. 허리띠를 졸라매고 돈 좀 아껴쓰세요!',
       }
 
       jest
-        .spyOn(service, 'recommendExpense')
+        .spyOn(expenseService, 'recommendExpense')
         .mockResolvedValue(mockRecommendedExpense)
 
-      mockExpenseRepository.createQueryBuilder.mockImplementation(() => ({
+      expenseRepository.createQueryBuilder.mockImplementation(() => ({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         innerJoin: jest.fn().mockReturnThis(),
@@ -397,36 +448,37 @@ describe('ExpenseService', () => {
 
       const expected = [
         {
-          categoryId: 2,
+          categoryName: '식사',
           ratio: '44.44%',
         },
         {
-          categoryId: 3,
+          categoryName: '교통',
           ratio: '67.86%',
         },
         {
-          categoryId: 4,
+          categoryName: '문화생활',
           ratio: '138.89%',
         },
         {
-          categoryId: 5,
+          categoryName: '주거/통신',
           ratio: '678.58%',
         },
         {
-          categoryId: 6,
+          categoryName: '생활용품',
           ratio: '67.86%',
         },
       ]
 
-      const results = await service.guideExpense(userId)
+      expenseCalculationService.calculateExpenseRatios.mockReturnValue(expected)
 
-      expect(results).toEqual(expected)
+      const result = await expenseService.guideExpense(userId)
+
+      expect(result).toEqual(expected)
     })
   })
 
   describe('compareRatioToLastMonth', () => {
     it('저번달과 이번달의 소비율 비교에 성공했습니다.', async () => {
-      const userId = 'userId'
       const mockLastMonthExpenditures = [
         { categoryId: 2, amount: 2000 },
         { categoryId: 3, amount: 3000 },
@@ -445,49 +497,36 @@ describe('ExpenseService', () => {
         getRawMany: jest.fn(),
       }
 
-      mockExpenseRepository.createQueryBuilder.mockImplementation(
+      expenseRepository.createQueryBuilder.mockImplementation(
         () => mockQueryBuilder,
       )
       mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce(mockLastMonthExpenditures)
         .mockResolvedValueOnce(mockThisMonthExpenditures)
+        .mockResolvedValueOnce(mockLastMonthExpenditures)
 
-      const expectedResults = [
+      const expectedResult = [
         {
           categoryId: 2,
           lastMonthAmount: 2000,
           thisMonthAmount: 1000,
-          ratio: '200.00%',
+          ratio: '50.00%',
         },
         {
           categoryId: 3,
           lastMonthAmount: 3000,
           thisMonthAmount: 1000,
-          ratio: '300.00%',
+          ratio: '33.33%',
         },
       ]
 
-      const results = await service.compareRatioToLastMonth(userId)
-      expect(results).toEqual(expectedResults)
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'expense.spent_date >= :lastMonthStartDate',
-        expect.any(Object),
-      )
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'expense.spent_date < :lastMonthEndDate',
-        expect.any(Object),
-      )
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'expense.user_id = :userId',
-        { userId },
-      )
+      const result = await expenseService.compareRatioToLastMonth(userId)
+
+      expect(result).toEqual(expectedResult)
     })
   })
 
   describe('compareRatioToLastWeek', () => {
     it('저번주과 이번주의 소비율 비교에 성공했습니다.', async () => {
-      const userId = 'userId'
-
       const mockLastWeekExpenditures = [
         { categoryId: 2, amount: 1000 },
         { categoryId: 3, amount: 2000 },
@@ -497,7 +536,7 @@ describe('ExpenseService', () => {
         { categoryId: 3, amount: 500 },
       ]
 
-      mockExpenseRepository.createQueryBuilder.mockReturnValue({
+      expenseRepository.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -506,12 +545,12 @@ describe('ExpenseService', () => {
         getRawMany: jest.fn(),
       })
 
-      mockExpenseRepository
+      expenseRepository
         .createQueryBuilder()
         .getRawMany.mockResolvedValueOnce(mockLastWeekExpenditures)
         .mockResolvedValue(mockThisWeekExpenditures)
 
-      const results = await service.compareRatioToLastWeek(userId)
+      const results = await expenseService.compareRatioToLastWeek(userId)
 
       expect(results).toEqual([
         {

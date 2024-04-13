@@ -1,20 +1,25 @@
 import { Module } from '@nestjs/common'
 import { ExpenseController } from './controllers/expense.controller'
 import { PassportModule } from '@nestjs/passport'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { Expense } from './entities/expense.entity'
-import { Category } from 'src/budget/entities/category.entity'
-import { Budget } from 'src/budget/entities/budget.entity'
-import { User } from 'src/user/entities/user.entity'
 import { ExpenseProvider } from './expense.provider'
 import { BudgetModule } from 'src/budget/budget.module'
+import { TypeOrmExModule } from 'src/common/decorator/typeorm-ex.module'
+import { CategoryRepository } from 'src/budget/category.repository'
+import { ExpenseRepository } from './expense.repository'
+import { UserRepository } from 'src/user/user.repository'
 
 @Module({
   imports: [
     BudgetModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([Budget, Expense, Category, User]),
+
+    TypeOrmExModule.forCustomRepository([
+      CategoryRepository,
+      ExpenseRepository,
+      UserRepository,
+    ]),
   ],
+
   controllers: [ExpenseController],
   providers: [...ExpenseProvider],
   exports: [...ExpenseProvider],

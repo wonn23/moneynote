@@ -2,10 +2,8 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { UpdateExpenseDto } from '../dto/update-expense.dto'
 import { Expense } from '../entities/expense.entity'
-import { Between, Repository } from 'typeorm'
-import { InjectRepository } from '@nestjs/typeorm'
+import { Between } from 'typeorm'
 import { Category } from 'src/budget/entities/category.entity'
-import { Budget } from 'src/budget/entities/budget.entity'
 import { User } from 'src/user/entities/user.entity'
 import { IExpenseSerivce } from '../interfaces/expense.service.interface'
 import { Transactional } from 'typeorm-transactional'
@@ -25,18 +23,16 @@ import {
   ExpenseCompatisonResult,
   GuideExpense,
 } from '../interfaces/expense-guide.interface'
+import { UserRepository } from 'src/user/user.repository'
+import { ExpenseRepository } from '../expense.repository'
+import { CategoryRepository } from 'src/budget/category.repository'
 
 @Injectable()
 export class ExpenseService implements IExpenseSerivce {
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-    @InjectRepository(Budget)
-    private budgetRepository: Repository<Budget>,
-    @InjectRepository(Expense)
-    private expenseRepository: Repository<Expense>,
-    @InjectRepository(Category)
-    private categoryRepository: Repository<Category>,
+    private readonly userRepository: UserRepository,
+    private readonly expenseRepository: ExpenseRepository,
+    private readonly categoryRepository: CategoryRepository,
     @Inject(IEXPENSE_CALCULATION_SERVICE)
     private expenseCalculationService: IExpenseCalculationService,
     @Inject(IEXPENSE_MESSAGE_SERVICE)
@@ -273,7 +269,7 @@ export class ExpenseService implements IExpenseSerivce {
       this.getStartOfMonth(today),
       today,
     )
-    console.log(thisMonthExpenses)
+
     const lastMonthExpenses = await this.fetchExpensesForPeriod(
       userId,
       this.getStartOfLastMonth(today),

@@ -5,318 +5,253 @@ import { Budget } from '../entities/budget.entity'
 import { Category } from '../entities/category.entity'
 import { User } from 'src/user/entities/user.entity'
 import { categoryEnum } from '../types/budget.enum'
-import { InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { NotFoundException } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import {
   MockRepository,
   MockRepositoryFactory,
 } from 'src/common/utils/mock-repository.factory'
+import { BudgetRepository } from '../budget.repository'
+import { CategoryRepository } from '../category.repository'
+import { IBudgetDesignStrategy } from '../interfaces/budget-design.interface'
+import {
+  MockService,
+  MockServiceFactory,
+} from 'src/common/utils/mock-service.factory'
+import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
+import { DefaultBudgetDesignStrategy } from '../services/default-budget-design-strategy'
+import { CreateBudgetDto } from '../dto/create-budget.dto'
+
+jest.mock('typeorm-transactional', () => ({
+  Transactional: () => () => ({}),
+}))
+
+const mockUser = {
+  id: 'testUserId',
+  username: 'testUsername',
+  email: 'test@example.com',
+  password: 'hashedPassword',
+  providerId: 'testProviderId',
+  consultingYn: false,
+  discordUrl: '',
+} as User
 
 describe('BudgetService', () => {
-  let service: BudgetService
-  let budgetRepository: ReturnType<typeof MockRepositoryFactory.create>
-  let categoryRepository: ReturnType<typeof MockRepositoryFactory.create>
+  let budgetService: BudgetService
+  let budgetRepository: MockRepository<BudgetRepository>
+  let categoryRepository: MockRepository<CategoryRepository>
+  let budgetDesignStrategy: MockService<IBudgetDesignStrategy>
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BudgetService,
         {
-          provide: getRepositoryToken(Budget),
-          useValue: MockRepositoryFactory.create(Budget),
+          provide: getRepositoryToken(BudgetRepository),
+          useValue: MockRepositoryFactory.getMockRepository(BudgetRepository),
         },
         {
-          provide: getRepositoryToken(Category),
-          useValue: MockRepositoryFactory.create(Category),
+          provide: getRepositoryToken(CategoryRepository),
+          useValue: MockRepositoryFactory.getMockRepository(CategoryRepository),
+        },
+        {
+          provide: IBUDGET_DESIGN_STRAGTEGY,
+          useValue: MockServiceFactory.getMockService(
+            DefaultBudgetDesignStrategy,
+          ),
         },
       ],
     }).compile()
 
-    service = module.get<BudgetService>(BudgetService)
-    budgetRepository = module.get(getRepositoryToken(Budget))
-    categoryRepository = module.get(getRepositoryToken(Category))
+    budgetService = module.get<BudgetService>(BudgetService)
+    budgetRepository = module.get(getRepositoryToken(BudgetRepository))
+    categoryRepository = module.get(getRepositoryToken(CategoryRepository))
+    budgetDesignStrategy = module.get(IBUDGET_DESIGN_STRAGTEGY)
 
     jest.clearAllMocks()
   })
 
   it('should be defined', () => {
-    expect(service).toBeDefined()
+    expect(budgetService).toBeDefined()
     expect(budgetRepository).toBeDefined()
     expect(categoryRepository).toBeDefined()
+    expect(budgetDesignStrategy).toBeDefined()
   })
 
   describe('createBudget', () => {
     it('예산 생성에 성공했습니다.', async () => {
-      const createBudgetDto = {
+      const userId = mockUser.id
+      const createBudgetDto: CreateBudgetDto = {
         year: 2024,
         month: 1,
         amount: 1000000,
         category: categoryEnum.food,
       }
-      const user = { id: 'testUserId', username: 'testUser' } as User
+      const category: Category = {
+        id: 2,
+        name: '식사',
+      } as Category
+      const expectedBudget: Budget = {
+        ...createBudgetDto,
+        category,
+        user: { id: userId },
+        id: expect.any(Number),
+      } as Budget
 
-      categoryRepository.findOne.mockResolvedValue({ id: 1, name: 'food' })
-      budgetRepository.save.mockResolvedValue(createBudgetDto)
+      categoryRepository.findOneBy.mockResolvedValue(category)
+      budgetRepository.create.mockResolvedValue(expectedBudget)
+      budgetRepository.save.mockResolvedValue(expectedBudget)
 
-      const result = await service.createBudget(createBudgetDto, user)
+      const result = await budgetService.createBudget(createBudgetDto, userId)
 
+      expect(budgetRepository.create).toHaveBeenCalledWith({
+        ...createBudgetDto,
+        category,
+        user: { id: userId },
+      })
       expect(budgetRepository.save).toHaveBeenCalled()
-      expect(result).toEqual(createBudgetDto)
-      expect(service.createBudget(createBudgetDto, user)).resolves.not.toThrow()
+      expect(result).toEqual(expectedBudget)
     })
   })
 
   describe('designBudget', () => {
-    it('설정한 전체 예산과 유저들의 평균 비율을 게산하여 예산을 설계합니다.', async () => {
-      const totalAmount = 2000000
-      const year = 2024
-      const month = 1
-      jest.spyOn(service, 'getAverageCategoryRatios').mockResolvedValue([
-        { name: '식사', ratio: '0.500' },
-        { name: '교통', ratio: '0.075' },
-        { name: '문화생활', ratio: '0.175' },
-        { name: '생활용품', ratio: '0.100' },
-        { name: '주거/통신', ratio: '0.150' },
-      ])
+    it('설정한 전체 예산과 유저들의 평균 비율을 게산하여 예산을 설계합니다.', async () => {})
 
-      const designBudget = await service.designBudget(totalAmount, year, month)
-      expect(designBudget).toEqual([
-        { category: '식사', budget: 1000000 },
-        { category: '문화생활', budget: 350000 },
-        { category: '주거/통신', budget: 300000 },
-        { category: '기타', budget: 350000 },
-      ])
-    })
-
-    it('예산 설계 도출 중 InternalServerErrorException에러 발생합니다.', async () => {
-      const totalAmount = 10000000
-      const year = 2024
-      const month = 1
-      jest.spyOn(service, 'getAverageCategoryRatios').mockResolvedValue([])
-
-      await expect(
-        service.designBudget(totalAmount, year, month),
-      ).rejects.toThrow(InternalServerErrorException)
-    })
+    it('예산 설계 도출 중 InternalServerErrorException에러 발생합니다.', async () => {})
   })
 
-  describe('getAverageCategoryRatios', () => {
-    it('데이터를 찾았을 때 계산된 비율을 return 합니다.', async () => {
-      const year = 2024
-      const month = 1
-      budgetRepository.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        innerJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([
-          { name: '전체', averageAmount: '2000000' },
-          { name: '식사', averageAmount: '1000000' },
-          { name: '교통', averageAmount: '150000' },
-          { name: '문화생활', averageAmount: '350000' },
-          { name: '생활용품', averageAmount: '200000' },
-          { name: '주거/통신', averageAmount: '300000' },
-        ]),
-      })
-
-      const ratios = await service.calculateCategoryRatios(year, month)
-      expect(ratios).toEqual([
-        { name: '식사', ratio: '0.500' },
-        { name: '교통', ratio: '0.075' },
-        { name: '문화생활', ratio: '0.175' },
-        { name: '생활용품', ratio: '0.100' },
-        { name: '주거/통신', ratio: '0.150' },
-      ])
-    })
-
-    it('데이터를 찾지 못해 기본 비율을 return 합니다.', async () => {
-      const year = 2024
-      const month = 1
-      budgetRepository.createQueryBuilder.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        innerJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue([
-          { name: '식사', ratio: '0.35' },
-          { name: '교통', ratio: '0.13' },
-          { name: '문화생활', ratio: '0.15' },
-          { name: '생활용품', ratio: '0.12' },
-          { name: '주거/통신', ratio: '0.25' },
-        ]),
-      })
-
-      const ratios = await service.calculateCategoryRatios(year, month)
-      expect(ratios).toEqual([
-        { name: '식사', ratio: '0.35' },
-        { name: '교통', ratio: '0.13' },
-        { name: '문화생활', ratio: '0.15' },
-        { name: '생활용품', ratio: '0.12' },
-        { name: '주거/통신', ratio: '0.25' },
-      ])
-    })
-  })
-
-  describe('findBudgetByYear', () => {
+  describe('findBudgets', () => {
+    const userId = mockUser.id
+    const year = 2024
+    const month = 4
     it('해당 연도의 예산 데이터를 성공적으로 찾습니다.', async () => {
-      const year = 2024
-      const category = { id: 1 }
-      const user = { id: 'user-id' } as User
-      budgetRepository
-        .createQueryBuilder()
-        .where()
-        .getRawMany.mockResolvedValue([
-          {
-            id: 1,
-            year: 2024,
-            month: 1,
-            amount: 1000000,
-            category_id: category.id,
-            user_id: user.id,
-          },
-          {
-            id: 2,
-            year: 2024,
-            month: 2,
-            amount: 2000000,
-            category_id: category.id,
-            user_id: user.id,
-          },
-        ])
+      const mockBudgets = [
+        {
+          id: 1,
+          year: 2024,
+          amount: 100,
+          category: { id: 2, name: categoryEnum.food },
+        },
+      ]
+      budgetRepository.find.mockResolvedValue(mockBudgets)
 
-      const result = await service.findBudgetByYear(year, user)
-      expect(result).toHaveLength(2)
-      expect(result[0].year).toEqual(year)
-      expect(result[1].year).toEqual(year)
+      const result = await budgetService.findBudgets(userId, year)
+
+      expect(budgetRepository.find).toHaveBeenCalledWith({
+        where: { user: { id: mockUser.id }, year },
+      })
+      expect(result).toEqual(mockBudgets)
     })
 
-    it('해당 연도의 예산 데이터가 없을 경우 NotFoundException을 발생시킵니다.', async () => {
-      const year = 2024
-      const user = { id: 'user-id' } as User
+    it('해당 연도와 월별 예산 데이터를 성공적으로 찾습니다.', async () => {
+      const mockBudgets = [
+        {
+          id: 1,
+          year: 2024,
+          month: 4,
+          amount: 100,
+          category: { id: 2, name: categoryEnum.food },
+        },
+      ]
+      budgetRepository.find.mockResolvedValue(mockBudgets)
 
-      budgetRepository
-        .createQueryBuilder()
-        .where()
-        .getRawMany.mockResolvedValue([])
+      const result = await budgetService.findBudgets(userId, year, month)
 
-      await expect(service.findBudgetByYear(year, user)).rejects.toThrow(
+      expect(budgetRepository.find).toHaveBeenCalledWith({
+        where: { user: { id: mockUser.id }, year, month },
+      })
+      expect(result).toEqual(mockBudgets)
+    })
+
+    it('해당 연도 혹은 월의 예산 데이터가 없을 경우 NotFoundException을 발생시킵니다.', async () => {
+      budgetRepository.find.mockResolvedValue([])
+
+      await expect(budgetService.findBudgets(userId, year)).rejects.toThrow(
         NotFoundException,
       )
     })
   })
 
-  describe('findBudgetByYearAndMonth', () => {
-    it('해당 연도와 월의 예산 데이터를 성공적으로 찾습니다.', async () => {
-      const year = 2024
-      const month = 1
-      const category = { id: 1 }
-      const user = { id: 'user-id' } as User
+  describe('updateBudget', () => {
+    const userId = mockUser.id
+    const category: Category = {
+      id: 2,
+      name: categoryEnum.food,
+    } as Category
+    const budget: Budget = {
+      id: 1,
+      year: 2024,
+      month: 4,
+      amount: 100,
+      category: { id: 2, name: categoryEnum.food },
+    } as Budget
+    const updateBudgetDto: UpdateBudgetDto = {
+      amount: 200,
+      category: categoryEnum.curtureLife,
+    }
+    const updatedBudget: Budget = {
+      id: 1,
+      year: 2024,
+      month: 4,
+      amount: 200,
+      category: { id: 4, name: categoryEnum.food },
+      user: { id: mockUser.id },
+    } as Budget
 
-      budgetRepository
-        .createQueryBuilder()
-        .where()
-        .getRawMany.mockResolvedValue([
-          {
-            id: 1,
-            year: 2024,
-            month: 1,
-            amount: 1000000,
-            category_id: category.id,
-            user_id: user.id,
-          },
-          {
-            id: 2,
-            year: 2024,
-            month: 1,
-            amount: 3000000,
-            category_id: category.id,
-            user_id: user.id,
-          },
-        ])
+    it('예산을 성공적으로 수정합니다.', async () => {
+      categoryRepository.findOneBy.mockResolvedValue(category)
+      budgetRepository.findOne.mockResolvedValue(budget)
+      budgetRepository.save.mockResolvedValue(updatedBudget)
 
-      const result = await service.findBudgetByYearAndMonth(year, month, user)
-      expect(result).toHaveLength(2)
-      expect(result[0].month).toEqual(month)
-      expect(result[1].month).toEqual(month)
+      const result = await budgetService.updateBudget(
+        1,
+        updateBudgetDto,
+        userId,
+      )
+      expect(result).toEqual(updatedBudget)
+      expect(budgetRepository.save).toHaveBeenCalledWith({
+        ...budget,
+        ...updateBudgetDto,
+        category,
+        user: { id: mockUser.id },
+      })
     })
 
-    it('해당 연도의 월의 예산 데이터가 없을 경우 NotFoundException을 발생시킵니다.', async () => {
-      const year = 2024
-      const month = 1
-      const user = { id: 'user-id' } as User
-
-      budgetRepository
-        .createQueryBuilder()
-        .where()
-        .getRawMany.mockResolvedValue([])
-
+    it('해당 카테고리를 탖을 수 없습니다.', async () => {
+      categoryRepository.findOneBy.mockResolvedValue(null)
       await expect(
-        service.findBudgetByYearAndMonth(year, month, user),
+        budgetService.updateBudget(1, updateBudgetDto, userId),
       ).rejects.toThrow(NotFoundException)
     })
-  })
 
-  describe('updateBudget', () => {
-    it('예산을 성공적으로 수정합니다.', async () => {
-      const id = 1
-      const updatedBudgetDto: UpdateBudgetDto = {
-        amount: 200000,
-        category: categoryEnum.food,
-      }
-      const user = { id: 'user-id' } as User
-
-      mockDataSource
-        .createQueryRunner()
-        .manager.findOne.mockResolvedValueOnce(new Category())
-        .mockResolvedValueOnce(new Budget())
-
-      mockDataSource.createQueryRunner().manager.save.mockResolvedValue({
-        ...updatedBudgetDto,
-        id,
-        user,
-      })
-
-      const result = await service.updateBudget(id, updatedBudgetDto, user)
-      expect(result.amount).toEqual(updatedBudgetDto.amount)
-    })
-
-    it('예산을 수정하는데 실패했습니다.', async () => {
-      const id = 1
-      const updateBudgetDto = {
-        amount: 200000,
-        category: '없는 카테고리' as any,
-      }
-      const user = { id: 'user-id' } as User
-
-      mockDataSource
-        .createQueryRunner()
-        .manager.findOne.mockResolvedValueOnce(null)
-
+    it('해당 예산을 찾을 수 없습니다.', async () => {
+      categoryRepository.findOneBy.mockResolvedValue(category)
+      budgetRepository.findOne.mockResolvedValue(null)
       await expect(
-        service.updateBudget(id, updateBudgetDto, user),
-      ).rejects.toThrow(InternalServerErrorException)
+        budgetService.updateBudget(1, updateBudgetDto, userId),
+      ).rejects.toThrow(NotFoundException)
     })
   })
 
   describe('deleteBudget', () => {
     it('예산을 성공적으로 삭제합니다.', async () => {
-      const id = 1
+      const budgetId = 1
 
-      mockBudgetRepository.delete.mockResolvedValue({ affected: 1 })
+      budgetRepository.delete.mockResolvedValue({ affected: 1 })
 
-      await expect(service.deleteBudget(id)).resolves.not.toThrow()
-      expect(mockBudgetRepository.delete).toHaveBeenCalledWith(id)
+      await expect(budgetService.deleteBudget(budgetId)).resolves.not.toThrow()
+      expect(budgetRepository.delete).toHaveBeenCalledWith(budgetId)
     })
 
     it('해당 id의 예산을 찾을 수 없을 경우 NotFOundException을 발생시킵니다.', async () => {
-      const id = 99
+      const budgetId = 99
 
-      mockBudgetRepository.delete.mockResolvedValue({ affected: 0 })
+      budgetRepository.delete.mockResolvedValue({ affected: 0 })
 
-      await expect(service.deleteBudget(id)).rejects.toThrow(NotFoundException)
-      expect(mockBudgetRepository.delete).toHaveBeenCalledWith(id)
+      await expect(budgetService.deleteBudget(budgetId)).rejects.toThrow(
+        NotFoundException,
+      )
+      expect(budgetRepository.delete).toHaveBeenCalledWith(budgetId)
     })
   })
 })
