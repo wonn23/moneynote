@@ -124,41 +124,41 @@ describe('BudgetService', () => {
     const userId = mockUser.id
     const year = 2024
     const month = 4
-    it('해당 연도의 예산 데이터를 성공적으로 찾습니다.', async () => {
+
+    function setupMocks(budgetDetails) {
       const mockBudgets = [
         {
           id: 1,
-          year: 2024,
+          year: budgetDetails.year,
+          month: budgetDetails.month,
           amount: 100,
           category: { id: 2, name: categoryEnum.food },
+          user: mockUser,
         },
       ]
       budgetRepository.find.mockResolvedValue(mockBudgets)
+      return mockBudgets
+    }
+    it('해당 연도의 예산 데이터를 성공적으로 찾습니다.', async () => {
+      const mockBudgets = setupMocks({ year })
 
       const result = await budgetService.findBudgets(userId, year)
 
       expect(budgetRepository.find).toHaveBeenCalledWith({
         where: { user: { id: mockUser.id }, year },
+        relations: ['category', 'user'],
       })
       expect(result).toEqual(mockBudgets)
     })
 
     it('해당 연도와 월별 예산 데이터를 성공적으로 찾습니다.', async () => {
-      const mockBudgets = [
-        {
-          id: 1,
-          year: 2024,
-          month: 4,
-          amount: 100,
-          category: { id: 2, name: categoryEnum.food },
-        },
-      ]
-      budgetRepository.find.mockResolvedValue(mockBudgets)
+      const mockBudgets = setupMocks({ year, month })
 
       const result = await budgetService.findBudgets(userId, year, month)
 
       expect(budgetRepository.find).toHaveBeenCalledWith({
         where: { user: { id: mockUser.id }, year, month },
+        relations: ['category', 'user'],
       })
       expect(result).toEqual(mockBudgets)
     })

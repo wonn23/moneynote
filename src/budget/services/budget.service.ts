@@ -111,7 +111,7 @@ export class BudgetService implements IBudgetService {
 
     const budgets = await this.budgetRepository.find({
       where: whereCondition,
-      relations: ['category'],
+      relations: ['category', 'user'],
     })
 
     if (!budgets.length) {

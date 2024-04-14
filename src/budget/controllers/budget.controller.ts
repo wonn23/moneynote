@@ -9,6 +9,7 @@ import {
   Put,
   ParseIntPipe,
   Inject,
+  Query,
 } from '@nestjs/common'
 import { UpdateBudgetDto } from '../dto/update-budget.dto'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
@@ -22,6 +23,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiProperty,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger'
 import { CurrentUser } from 'src/common/decorator/current-user.decorator'
@@ -59,6 +61,41 @@ export class BudgetController {
     return this.budgetService.createBudget(createBudgetDto, userId)
   }
 
+  @Get('/')
+  @ApiOperation({
+    summary: '예산 조회 연도별 또는 연도와 월별',
+    description: '예산을 연도별로 또는 연도와 월로 조회할 수 있습니다.',
+  })
+  @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
+  @ApiNotFoundResponse({
+    description: '해당 연도 또는 월의 예산 데이터를 찾을 수 없습니다.',
+  })
+  @ApiQuery({
+    name: 'year',
+    required: true,
+    description: '조회할 연도',
+    example: 2024,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    description: '조회할 월',
+    example: 3,
+    type: Number,
+  })
+  async findBudgets(
+    @CurrentUser() userId: string,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('month') month?: number,
+  ): Promise<Budget[]> {
+    if (month) {
+      return this.budgetService.findBudgets(userId, year, month)
+    } else {
+      return this.budgetService.findBudgets(userId, year)
+    }
+  }
+
   @Post('/design')
   @ApiOperation({
     summary: '예산 추천',
@@ -87,39 +124,6 @@ export class BudgetController {
     @Body('month') month: number,
   ): Promise<BudgetAmount[]> {
     return this.budgetService.designBudget(totalAmount, year, month)
-  }
-
-  @Get('/:year/:month?')
-  @ApiOperation({
-    summary: '예산 조회 연도별 또는 연도와 월별',
-    description: '예산을 연도별로 또는 연도와 월로 조회할 수 있습니다.',
-  })
-  @ApiOkResponse({ description: '예산 조회 성공', type: [Budget] })
-  @ApiNotFoundResponse({
-    description: '해당 연도 또는 월의 예산 데이터를 찾을 수 없습니다.',
-  })
-  @ApiParam({
-    name: 'year',
-    required: true,
-    description: '조회할 연도',
-    example: 2024,
-  })
-  @ApiParam({
-    name: 'month',
-    required: false,
-    description: '조회할 월',
-    example: 3,
-  })
-  async findBudgets(
-    @CurrentUser() userId: string,
-    @Param('year', ParseIntPipe) year: number,
-    @Param('month', ParseIntPipe) month?: number,
-  ): Promise<Budget[]> {
-    if (month) {
-      return this.budgetService.findBudgets(userId, year, month)
-    } else {
-      return this.budgetService.findBudgets(userId, year)
-    }
   }
 
   @Put(':id')
