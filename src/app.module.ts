@@ -6,7 +6,6 @@ import { AuthModule } from './auth/auth.module'
 import { UserModule } from './user/user.module'
 import { BudgetModule } from './budget/budget.module'
 import { ExpenseModule } from './expense/expense.module'
-import { WebhookModule } from './webhook/webhook.module'
 import { LoggerMiddleware } from './common/middlewares/logger.middleware'
 import { addTransactionalDataSource } from 'typeorm-transactional'
 import { DataSource } from 'typeorm'
@@ -37,7 +36,6 @@ import { RedisCacheModule } from './cache/cache.module'
     UserModule,
     BudgetModule,
     ExpenseModule,
-    WebhookModule,
     RedisCacheModule,
   ],
 })

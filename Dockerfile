@@ -30,7 +30,6 @@ COPY . .
 
 RUN npm run build
 
-
 RUN npm run test
 
 RUN npm run test:e2e
