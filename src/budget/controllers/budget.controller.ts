@@ -87,7 +87,7 @@ export class BudgetController {
   async findBudgets(
     @CurrentUser() userId: string,
     @Query('year', ParseIntPipe) year: number,
-    @Query('month') month?: string,
+    @Query('month') month?: number,
   ): Promise<Budget[]> {
     if (month) {
       return this.budgetService.findBudgets(userId, year, +month)
