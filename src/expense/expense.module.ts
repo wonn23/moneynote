@@ -12,7 +12,6 @@ import { UserRepository } from 'src/user/user.repository'
   imports: [
     BudgetModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-
     TypeOrmExModule.forCustomRepository([
       CategoryRepository,
       ExpenseRepository,

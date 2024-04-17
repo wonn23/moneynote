@@ -1,10 +1,10 @@
-import * as request from 'supertest'
 import { createNestApplication } from './utils'
 import * as crypto from 'crypto'
+import { requestE2E } from './request.e2e'
 
 describe('UserController (e2e)', () => {
   let app
-  let createdUserId: string
+  // let createdUserId: string
 
   beforeAll(async () => {
     app = await createNestApplication()
@@ -17,22 +17,26 @@ describe('UserController (e2e)', () => {
   describe('/users/signup : (POST) : 유저 회원가입', () => {
     it('유저 회원가입 성공', async () => {
       const uniqueUsername = `user_${crypto.randomBytes(6).toString('hex')}`
-      const response = await request(app.getHttpServer())
-        .post(`/users/signup`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'post',
+        `/users/signup`,
+        201,
+        null,
+        {
           username: uniqueUsername,
           email: `${uniqueUsername}@naver.com`,
           password: '1q2w3e4r5t!',
           consultingYn: true,
-        })
-        .expect(201)
+        },
+      )
 
       expect(response.body).toHaveProperty(
         'message',
         '회원가입에 성공했습니다.',
       )
 
-      createdUserId = response.body.id
+      // createdUserId = response.body.id
     })
   })
 

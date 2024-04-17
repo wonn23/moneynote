@@ -1,5 +1,5 @@
-import * as request from 'supertest'
 import { createNestApplication } from './utils'
+import { requestE2E } from './request.e2e'
 
 describe('AuthController (e2e)', () => {
   let app
@@ -16,13 +16,11 @@ describe('AuthController (e2e)', () => {
 
   describe('/auth/login : (POST) : 유저 로그인', () => {
     it('로그인 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: 'wonn22@naver.com',
-          password: '1q2w3e4r5t!',
-        })
-        .expect(201)
+      const response = await requestE2E(app, 'post', '/auth/login', 201, null, {
+        email: 'wonn22@naver.com',
+        password: '1q2w3e4r5t!',
+      })
+
       accessToken = response.body.accessToken
       refreshToken = response.body.refreshToken
       expect(response.body).toHaveProperty('accessToken')
@@ -32,19 +30,19 @@ describe('AuthController (e2e)', () => {
 
   describe('/auth/logout : (POST) : 로그아웃', () => {
     it('로그아웃 성공', async () => {
-      await request(app.getHttpServer())
-        .get('/auth/logout')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(201)
+      await requestE2E(app, 'get', '/auth/logout', 201, accessToken)
     })
   })
 
   describe('/auth/protected : (GET) : 로그인 확인', () => {
     it('로그인 되어 있는 유저', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/auth/protected')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        '/auth/protected',
+        200,
+        accessToken,
+      )
 
       expect(response).toEqual(true)
     })
@@ -52,10 +50,13 @@ describe('AuthController (e2e)', () => {
 
   describe('/auth/refresh : (GET) : Access 토큰 재발급', () => {
     it('Access 토큰 재발급 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/auth/refresh')
-        .set('Authorization', `Bearer ${refreshToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        '/auth/refresh',
+        200,
+        refreshToken,
+      )
 
       expect(response.body).toHaveProperty('accessToken')
     })

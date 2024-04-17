@@ -1,5 +1,6 @@
-import * as request from 'supertest'
-import { authenticateUser, createNestApplication } from './utils'
+import { setupLoggedIn } from './setup-logged-in'
+import { createNestApplication } from './utils'
+import { requestE2E } from './request.e2e'
 
 describe('ExpenseController (e2e)', () => {
   let app
@@ -8,7 +9,7 @@ describe('ExpenseController (e2e)', () => {
 
   beforeAll(async () => {
     app = await createNestApplication()
-    const tokens = await authenticateUser(app)
+    const tokens = await setupLoggedIn(app)
     accessToken = tokens.accessToken
   })
 
@@ -18,16 +19,19 @@ describe('ExpenseController (e2e)', () => {
 
   describe('/expense : (POST) : 지출 생성', () => {
     it('지출 생성 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/expense')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'post',
+        '/expense',
+        201,
+        accessToken,
+        {
           amount: 5000,
           memo: '짜장면',
           isExcluded: false,
           category: '식사',
-        })
-        .expect(201)
+        },
+      )
 
       createdExpenseId = response.body.id
 
@@ -47,12 +51,16 @@ describe('ExpenseController (e2e)', () => {
     it('지출 목록 조회 성공', async () => {
       const startDate = '2024-04-01'
       const endDate = '2024-04-30'
-      const response = await request(app.getHttpServer())
-        .get(`/expense?startDate=${startDate}&endDate=${endDate}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense?startDate=${startDate}&endDate=${endDate}`,
+        200,
+        accessToken,
+      )
 
       expect(Array.isArray(response.body)).toBeTruthy()
+
       response.body.forEach((item) => {
         expect(item).toHaveProperty('id')
         expect(item).toHaveProperty('amount')
@@ -69,10 +77,13 @@ describe('ExpenseController (e2e)', () => {
   describe('/expense/:id : (GET) : 지출 상세 조회', () => {
     it('지출 상세 조회', async () => {
       const id = 1
-      const response = await request(app.getHttpServer())
-        .get(`/expense/${id}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense/${id}`,
+        200,
+        accessToken,
+      )
 
       expect(response.body).toHaveProperty('amount')
       expect(response.body).toHaveProperty('memo')
@@ -85,16 +96,19 @@ describe('ExpenseController (e2e)', () => {
   describe('/expense/:id : (PUT) : 지출 수정', () => {
     it('지출 수정 성공', async () => {
       const id = 1
-      const response = await request(app.getHttpServer())
-        .put(`/expense/${id}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'put',
+        `/expense/${id}`,
+        200,
+        accessToken,
+        {
           amount: 7000,
           memo: '오늘은 영화 감상',
           isExcluded: false,
           category: '문화생활',
-        })
-        .expect(200)
+        },
+      )
 
       expect(response.body).toHaveProperty('id', 1)
       expect(response.body).toHaveProperty('amount', 7000)
@@ -111,19 +125,25 @@ describe('ExpenseController (e2e)', () => {
 
   describe('/expense/:id : (DELETE) : 지출 삭제', () => {
     it('지출 삭제 성공', async () => {
-      await request(app.getHttpServer())
-        .delete(`/expense/${createdExpenseId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      await requestE2E(
+        app,
+        'delete',
+        `/expense/${createdExpenseId}`,
+        200,
+        accessToken,
+      )
     })
   })
 
   describe('/expense/alarm/recommend : (GET) : 오늘의 지출 추천', () => {
     it('오늘의 지출 추천 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/expense/alarm/recommend`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense/alarm/recommend`,
+        200,
+        accessToken,
+      )
 
       expect(response.body).toHaveProperty('availableDailyExpense')
       expect(response.body).toHaveProperty(
@@ -148,10 +168,13 @@ describe('ExpenseController (e2e)', () => {
 
   describe('/expense/alarm/guide : (GET) : 오늘의 지출 안내', () => {
     it('오늘의 지출 안내 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/expense/alarm/guide`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense/alarm/guide`,
+        200,
+        accessToken,
+      )
 
       expect(Array.isArray(response.body)).toBeTruthy()
       response.body.forEach((item) => {
@@ -163,10 +186,13 @@ describe('ExpenseController (e2e)', () => {
 
   describe('/expense/statistics/monthly : (GET) : 지난달과 소비율 비교', () => {
     it('지난달과 소비율 비교 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/expense/statistics/monthly`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense/statistics/monthly`,
+        200,
+        accessToken,
+      )
 
       expect(Array.isArray(response.body)).toBeTruthy()
       response.body.forEach((item) => {
@@ -180,10 +206,13 @@ describe('ExpenseController (e2e)', () => {
 
   describe('/expense/statistics/weekly : (GET) : 지난주와 소비율 비교', () => {
     it('지난주와 소비율 비교 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .get(`/expense/statistics/weekly`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/expense/statistics/weekly`,
+        200,
+        accessToken,
+      )
 
       expect(Array.isArray(response.body)).toBeTruthy()
       response.body.forEach((item) => {

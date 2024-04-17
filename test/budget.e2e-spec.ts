@@ -1,5 +1,6 @@
-import * as request from 'supertest'
-import { authenticateUser, createNestApplication } from './utils'
+import { setupLoggedIn } from './setup-logged-in'
+import { createNestApplication } from './utils'
+import { requestE2E } from './request.e2e'
 
 describe('BudgetController (e2e)', () => {
   let app
@@ -8,7 +9,7 @@ describe('BudgetController (e2e)', () => {
 
   beforeAll(async () => {
     app = await createNestApplication()
-    const tokens = await authenticateUser(app)
+    const tokens = await setupLoggedIn(app)
     accessToken = tokens.accessToken
   })
 
@@ -18,16 +19,19 @@ describe('BudgetController (e2e)', () => {
 
   describe('/budgets : (POST) : 예산 생성', () => {
     it('예산 생성 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/budgets')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'post',
+        '/budgets',
+        201,
+        accessToken,
+        {
           year: 2024,
           month: 5,
           amount: 1000000,
           category: '전체',
-        })
-        .expect(201)
+        },
+      )
 
       createdBudgetId = response.body.id
 
@@ -43,15 +47,18 @@ describe('BudgetController (e2e)', () => {
 
   describe('/budgets/design : (POST) : 예산 추천 설계', () => {
     it('예산 추천 설계 성공', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/budgets/design')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'post',
+        '/budgets/design',
+        201,
+        accessToken,
+        {
           totalAmount: 1000000,
           year: 2024,
           month: 3,
-        })
-        .expect(201)
+        },
+      )
 
       const expectedCategories = [
         '식사',
@@ -71,10 +78,13 @@ describe('BudgetController (e2e)', () => {
   describe('/budgets/ : (GET) : 연도별 예산 조회', () => {
     it('연도별 예산 조회', async () => {
       const year = 2024
-      const response = await request(app.getHttpServer())
-        .get(`/budgets/?year=${year}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/budgets/?year=${year}`,
+        200,
+        accessToken,
+      )
 
       expect(Array.isArray(response.body)).toBeTruthy()
       response.body.forEach((item) => {
@@ -93,10 +103,14 @@ describe('BudgetController (e2e)', () => {
     it('연도와 월별별 예산 조회 성공', async () => {
       const year = 2024
       const month = 4
-      const response = await request(app.getHttpServer())
-        .get(`/budgets/?year=${year}&month=${month}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      const response = await requestE2E(
+        app,
+        'get',
+        `/budgets/?year=${year}&month=${month}`,
+        200,
+        accessToken,
+      )
+
       expect(Array.isArray(response.body)).toBeTruthy()
 
       response.body.forEach((item) => {
@@ -116,14 +130,17 @@ describe('BudgetController (e2e)', () => {
   describe('/budgets/:id : (PUT) : 예산 수정', () => {
     it('예산 수정 성공', async () => {
       const id = 5
-      const response = await request(app.getHttpServer())
-        .put(`/budgets/${id}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
+      const response = await requestE2E(
+        app,
+        'put',
+        `/budgets/${id}`,
+        200,
+        accessToken,
+        {
           amount: 3000000,
           category: '전체',
-        })
-        .expect(200)
+        },
+      )
 
       expect(response.body).toHaveProperty('id', 5)
       expect(response.body).toHaveProperty('year')
@@ -140,10 +157,13 @@ describe('BudgetController (e2e)', () => {
 
   describe('/budgets/:id : (DELETE) : 예산 삭제', () => {
     it('예산 삭제 성공', async () => {
-      await request(app.getHttpServer())
-        .delete(`/budgets/${createdBudgetId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200)
+      await requestE2E(
+        app,
+        'delete',
+        `/budgets/${createdBudgetId}`,
+        200,
+        accessToken,
+      )
     })
   })
 })

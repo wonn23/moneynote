@@ -56,7 +56,7 @@ export class DefaultBudgetDesignStrategy implements IBudgetDesignStrategy {
   private filterAndAllocateOtherBudgets(
     budgetDesigns: BudgetAmount[],
     totalAmount: number,
-    threshold: number = 0.1,
+    threshold = 0.1,
   ): BudgetAmount[] {
     const thresholdAmount = totalAmount * threshold
     let otherTotalBudget = 0
