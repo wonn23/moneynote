@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common'
 import { AppModule } from '../src/app.module'
 import { HttpExceptionFilter } from '../src/common/exceptions/http-exception.filter'
 import { initializeTransactionalContext } from 'typeorm-transactional'
+import { DataSource } from 'typeorm'
 
 export async function createNestApplication(): Promise<INestApplication> {
   initializeTransactionalContext()
@@ -22,4 +23,15 @@ export async function createNestApplication(): Promise<INestApplication> {
   await app.init()
 
   return app
+}
+
+export async function closeNestApplication(
+  app: INestApplication,
+): Promise<void> {
+  const dataSource: DataSource = app.get(DataSource)
+  if (dataSource.isInitialized) {
+    await dataSource.destroy()
+  }
+
+  await app.close()
 }

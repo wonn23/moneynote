@@ -1,11 +1,11 @@
 import { setupLoggedIn } from './setup-logged-in'
-import { createNestApplication } from './utils'
+import { closeNestApplication, createNestApplication } from './utils'
 import { requestE2E } from './request.e2e'
 
 describe('ExpenseController (e2e)', () => {
   let app
-  let accessToken: string
   let createdExpenseId: number
+  let accessToken: string
 
   beforeAll(async () => {
     app = await createNestApplication()
@@ -14,7 +14,7 @@ describe('ExpenseController (e2e)', () => {
   })
 
   afterAll(async () => {
-    await app.close()
+    await closeNestApplication(app)
   })
 
   describe('/expense : (POST) : 지출 생성', () => {

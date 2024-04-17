@@ -1,5 +1,5 @@
 import { setupLoggedIn } from './setup-logged-in'
-import { createNestApplication } from './utils'
+import { closeNestApplication, createNestApplication } from './utils'
 import { requestE2E } from './request.e2e'
 
 describe('BudgetController (e2e)', () => {
@@ -14,7 +14,7 @@ describe('BudgetController (e2e)', () => {
   })
 
   afterAll(async () => {
-    await app.close()
+    await closeNestApplication(app)
   })
 
   describe('/budgets : (POST) : 예산 생성', () => {

@@ -1,4 +1,4 @@
-import { createNestApplication } from './utils'
+import { closeNestApplication, createNestApplication } from './utils'
 import * as crypto from 'crypto'
 import { requestE2E } from './request.e2e'
 
@@ -11,7 +11,7 @@ describe('UserController (e2e)', () => {
   })
 
   afterAll(async () => {
-    await app.close()
+    await closeNestApplication(app)
   })
 
   describe('/users/signup : (POST) : 유저 회원가입', () => {

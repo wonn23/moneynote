@@ -1,4 +1,4 @@
-import { createNestApplication } from './utils'
+import { closeNestApplication, createNestApplication } from './utils'
 import { requestE2E } from './request.e2e'
 
 describe('AuthController (e2e)', () => {
@@ -11,7 +11,7 @@ describe('AuthController (e2e)', () => {
   })
 
   afterAll(async () => {
-    await app.close()
+    await closeNestApplication(app)
   })
 
   describe('/auth/login : (POST) : 유저 로그인', () => {
@@ -28,9 +28,31 @@ describe('AuthController (e2e)', () => {
     })
   })
 
+  describe('/auth/refresh : (GET) : Access 토큰 재발급', () => {
+    it('Access 토큰 재발급 성공', async () => {
+      const response = await requestE2E(
+        app,
+        'get',
+        '/auth/refresh',
+        200,
+        refreshToken,
+      )
+
+      expect(response.body).toHaveProperty('accessToken')
+    })
+  })
+
   describe('/auth/logout : (POST) : 로그아웃', () => {
     it('로그아웃 성공', async () => {
-      await requestE2E(app, 'get', '/auth/logout', 201, accessToken)
+      const response = await requestE2E(
+        app,
+        'post',
+        '/auth/logout',
+        201,
+        accessToken,
+      )
+
+      expect(response.body.message).toEqual('로그아웃 성공.')
     })
   })
 
@@ -44,21 +66,7 @@ describe('AuthController (e2e)', () => {
         accessToken,
       )
 
-      expect(response).toEqual(true)
-    })
-  })
-
-  describe('/auth/refresh : (GET) : Access 토큰 재발급', () => {
-    it('Access 토큰 재발급 성공', async () => {
-      const response = await requestE2E(
-        app,
-        'get',
-        '/auth/refresh',
-        200,
-        refreshToken,
-      )
-
-      expect(response.body).toHaveProperty('accessToken')
+      expect(response.text).toEqual('true')
     })
   })
 })

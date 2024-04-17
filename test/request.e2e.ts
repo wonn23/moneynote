@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common'
-import request from 'supertest'
+import * as request from 'supertest'
 
 export const requestE2E = async (
   app: INestApplication,
