@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Put, Delete } from '@nestjs/common'
+import { Controller, Post, Body, Put, Delete, Param } from '@nestjs/common'
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -25,23 +25,26 @@ export class UserController {
     return this.userService.register(createUserDto)
   }
 
-  @Put()
+  @Put('/:userId')
   @ApiOperation({
     summary: '유저 정보 수정',
     description: '유저 정보를 수정합니다.',
   })
   @ApiOkResponse({ description: 'ok' })
-  update(userId: string, updateUserDto: UpdateUserDto): Promise<void> {
+  update(
+    @Param('userId') userId: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<void> {
     return this.userService.update(userId, updateUserDto)
   }
 
-  @Delete()
+  @Delete('/:userId')
   @ApiOperation({
-    summary: '유저 정보 수정',
-    description: '유저 정보를 수정합니다.',
+    summary: '유저 정보 삭제',
+    description: '유저 정보를 삭제합니다.',
   })
   @ApiOkResponse({ description: 'ok' })
-  delete(userId: string): Promise<void> {
+  delete(@Param('userId') userId: string): Promise<void> {
     return this.userService.delete(userId)
   }
 }

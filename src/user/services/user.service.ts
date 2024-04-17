@@ -74,6 +74,7 @@ export class UserService {
     const result = await this.userRepository.delete({
       id: userId,
     })
+
     if (result.affected === 0) {
       throw new NotFoundException(`해당 유저의 ${userId}를 찾을 수 없습니다.`)
     }
