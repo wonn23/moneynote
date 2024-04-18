@@ -21,7 +21,7 @@ export class UserController {
     description: '유저를 등록합니다.',
   })
   @ApiCreatedResponse({ description: 'sucess' })
-  register(@Body() createUserDto: CreateUserDto): Promise<CreateUser> {
+  async register(@Body() createUserDto: CreateUserDto): Promise<CreateUser> {
     return this.userService.register(createUserDto)
   }
 

@@ -1,7 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { typeORMConfig } from './config/typeorm'
+import { getORMConfig, getTestOrmConfig } from './config/typeorm'
 import { AuthModule } from './auth/auth.module'
 import { UserModule } from './user/user.module'
 import { BudgetModule } from './budget/budget.module'
@@ -10,6 +10,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware'
 import { addTransactionalDataSource } from 'typeorm-transactional'
 import { DataSource } from 'typeorm'
 import { RedisCacheModule } from './cache/cache.module'
+import { DatabaseService } from './config/database.service'
 
 @Module({
   imports: [
@@ -24,7 +25,9 @@ import { RedisCacheModule } from './cache/cache.module'
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) =>
-        await typeORMConfig(configService),
+        process.env.NODE_ENV === 'test'
+          ? getTestOrmConfig()
+          : getORMConfig(configService),
       async dataSourceFactory(options) {
         if (!options) {
           throw new Error('Invalid options passed')
@@ -38,6 +41,7 @@ import { RedisCacheModule } from './cache/cache.module'
     ExpenseModule,
     RedisCacheModule,
   ],
+  providers: [DatabaseService],
 })
 // 미들웨어들은 consumer에다가 연결한다.
 export class AppModule implements NestModule {

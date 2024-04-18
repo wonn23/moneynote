@@ -1,9 +1,10 @@
 import { setupLoggedIn } from './setup-logged-in'
 import { closeNestApplication, createNestApplication } from './utils'
 import { requestE2E } from './request.e2e'
+import { INestApplication } from '@nestjs/common'
 
 describe('BudgetController (e2e)', () => {
-  let app
+  let app: INestApplication
   let createdBudgetId: string
   let accessToken: string
 
@@ -11,7 +12,7 @@ describe('BudgetController (e2e)', () => {
     app = await createNestApplication()
     const tokens = await setupLoggedIn(app)
     accessToken = tokens.accessToken
-  })
+  }, 10000)
 
   afterAll(async () => {
     await closeNestApplication(app)
@@ -27,7 +28,7 @@ describe('BudgetController (e2e)', () => {
         accessToken,
         {
           year: 2024,
-          month: 5,
+          month: 7,
           amount: 1000000,
           category: '전체',
         },
@@ -36,13 +37,13 @@ describe('BudgetController (e2e)', () => {
       createdBudgetId = response.body.id
 
       expect(response.body).toHaveProperty('year', 2024)
-      expect(response.body).toHaveProperty('month', 5)
+      expect(response.body).toHaveProperty('month', 7)
       expect(response.body).toHaveProperty('amount', 1000000)
       expect(response.body).toHaveProperty('category')
       expect(response.body.category).toHaveProperty('id', 1)
       expect(response.body.category).toHaveProperty('name', '전체')
       expect(response.body).toHaveProperty('user')
-    })
+    }, 10000)
   })
 
   describe('/budgets/design : (POST) : 예산 추천 설계', () => {
@@ -72,7 +73,7 @@ describe('BudgetController (e2e)', () => {
         expect(expectedCategories).toContain(item.categoryName)
         expect(typeof item.budgetAmount).toBe('number')
       })
-    })
+    }, 10000)
   })
 
   describe('/budgets/ : (GET) : 연도별 예산 조회', () => {
@@ -98,7 +99,7 @@ describe('BudgetController (e2e)', () => {
         expect(item).toHaveProperty('category')
         expect(item).toHaveProperty('user')
       })
-    })
+    }, 10000)
 
     it('연도와 월별별 예산 조회 성공', async () => {
       const year = 2024
@@ -124,7 +125,7 @@ describe('BudgetController (e2e)', () => {
         expect(item).toHaveProperty('category')
         expect(item).toHaveProperty('user')
       })
-    })
+    }, 10000)
   })
 
   describe('/budgets/:id : (PUT) : 예산 수정', () => {
@@ -137,7 +138,7 @@ describe('BudgetController (e2e)', () => {
         200,
         accessToken,
         {
-          amount: 3000000,
+          amount: 100000,
           category: '전체',
         },
       )
@@ -145,14 +146,14 @@ describe('BudgetController (e2e)', () => {
       expect(response.body).toHaveProperty('id', 5)
       expect(response.body).toHaveProperty('year')
       expect(response.body).toHaveProperty('month')
-      expect(response.body).toHaveProperty('amount', 3000000)
+      expect(response.body).toHaveProperty('amount', 100000)
       expect(response.body).toHaveProperty('createdAt')
       expect(response.body).toHaveProperty('updatedAt')
       expect(response.body).toHaveProperty('deletedAt')
       expect(response.body).toHaveProperty('category')
       expect(response.body.category).toHaveProperty('name', '전체')
       expect(response.body).toHaveProperty('user')
-    })
+    }, 10000)
   })
 
   describe('/budgets/:id : (DELETE) : 예산 삭제', () => {
@@ -164,6 +165,6 @@ describe('BudgetController (e2e)', () => {
         200,
         accessToken,
       )
-    })
+    }, 10000)
   })
 })

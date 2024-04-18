@@ -1,9 +1,10 @@
 import { closeNestApplication, createNestApplication } from './utils'
 import * as crypto from 'crypto'
 import { requestE2E } from './request.e2e'
+import { INestApplication } from '@nestjs/common'
 
 describe('UserController (e2e)', () => {
-  let app
+  let app: INestApplication
   // let createdUserId: string
 
   beforeAll(async () => {

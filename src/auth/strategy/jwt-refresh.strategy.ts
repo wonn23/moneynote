@@ -24,16 +24,19 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(req: Request, payload: Payload) {
-    const refreshToken = req.headers['authorization'].split(' ')[1] // client request의 헤더에서 토큰값 가져오기('Bearer ' 제거)
-
-    const isTokenValid = await this.authService.isRefreshTokenValid(
-      refreshToken,
-      payload.userId,
-    )
-    if (!isTokenValid) {
-      throw new UnauthorizedException('유효한 토큰이 아닙니다.')
+    try {
+      const refreshToken = req.headers['authorization'].split(' ')[1]
+      const isTokenValid = await this.authService.isRefreshTokenValid(
+        refreshToken,
+        payload.userId,
+      )
+      if (!isTokenValid) {
+        throw new UnauthorizedException('유효한 토큰이 아닙니다.')
+      }
+      return payload.userId
+    } catch (error) {
+      console.error('JwtRefreshTokenStrategy validate Error:', error)
+      throw error // Optionally rethrow the error if you want to propagate it upwards
     }
-
-    return payload.userId
   }
 }

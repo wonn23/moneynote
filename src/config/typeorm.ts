@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config'
 import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies'
 
-export const typeORMConfig = async (
+export const getORMConfig = async (
   configService: ConfigService,
 ): Promise<TypeOrmModuleOptions> => {
   return {
@@ -17,5 +17,19 @@ export const typeORMConfig = async (
     namingStrategy: new SnakeNamingStrategy(),
     // dropSchema: true,
     // logging: true,
+  }
+}
+
+export const getTestOrmConfig = async (): Promise<TypeOrmModuleOptions> => {
+  return {
+    type: 'postgres',
+    host: 'localhost',
+    port: 5432,
+    username: 'postgres',
+    password: '0000',
+    database: 'test_db',
+    entities: [__dirname + '/../**/*.entity.{js,ts}'],
+    synchronize: true,
+    namingStrategy: new SnakeNamingStrategy(),
   }
 }

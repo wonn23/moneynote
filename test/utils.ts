@@ -4,6 +4,7 @@ import { AppModule } from '../src/app.module'
 import { HttpExceptionFilter } from '../src/common/exceptions/http-exception.filter'
 import { initializeTransactionalContext } from 'typeorm-transactional'
 import { DataSource } from 'typeorm'
+import { ICACHE_SERVICE } from 'src/common/utils/constants'
 
 export async function createNestApplication(): Promise<INestApplication> {
   initializeTransactionalContext()
@@ -16,7 +17,6 @@ export async function createNestApplication(): Promise<INestApplication> {
     new ValidationPipe({
       transform: true,
       whitelist: true,
-      skipMissingProperties: true,
     }),
   )
   app.useGlobalFilters(new HttpExceptionFilter())
@@ -28,10 +28,25 @@ export async function createNestApplication(): Promise<INestApplication> {
 export async function closeNestApplication(
   app: INestApplication,
 ): Promise<void> {
-  const dataSource: DataSource = app.get(DataSource)
-  if (dataSource.isInitialized) {
-    await dataSource.destroy()
+  try {
+    const dataSource: DataSource = app.get(DataSource)
+    if (dataSource && dataSource.isInitialized) {
+      console.log('데이터베이스 종료 직전!!')
+      await dataSource.destroy()
+      console.log('데이터베이스 종료 완료')
+    } else {
+      console.log('데이터베이스 이미 종료됨 혹은 초기화되지 않음')
+    }
+
+    // Redis 연결 종료
+    const redisService = app.get(ICACHE_SERVICE)
+    const redisClient = redisService.cacheManager.store.getClient()
+    await redisClient.quit()
+    console.log('Redis 연결 종료 완료')
+  } catch (error) {
+    console.error('Failed to close data source or Redis', error)
   }
 
   await app.close()
+  console.log('애플리케이션 종료 완료')
 }

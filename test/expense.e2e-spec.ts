@@ -1,9 +1,10 @@
 import { setupLoggedIn } from './setup-logged-in'
 import { closeNestApplication, createNestApplication } from './utils'
 import { requestE2E } from './request.e2e'
+import { INestApplication } from '@nestjs/common'
 
 describe('ExpenseController (e2e)', () => {
-  let app
+  let app: INestApplication
   let createdExpenseId: number
   let accessToken: string
 
