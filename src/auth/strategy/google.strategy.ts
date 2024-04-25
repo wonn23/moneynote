@@ -25,8 +25,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ) {
-    console.log('accessToken', accessToken)
-    console.log('refreshToken', refreshToken)
     const { id, name, emails } = profile
 
     const providerId = id

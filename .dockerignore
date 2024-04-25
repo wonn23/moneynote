@@ -1,2 +1,4 @@
-node_modules/
-dist/
+.git
+Dockerfile
+node_modules
+dist

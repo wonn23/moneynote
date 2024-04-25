@@ -1,6 +1,6 @@
-FROM node:20.10.0
+FROM node:20
 
-ARG NODE_ENV
+ARG NODE_ENV=production
 ARG JWT_ACCESS_TOKEN_SECRET
 ARG JWT_ACCESS_TOKEN_EXPIRATION_TIME
 ARG JWT_REFRESH_TOKEN_SECRET
@@ -23,7 +23,7 @@ ENV REDIS_PORT=${REDIS_PORT}
 ENV REDIS_PASSWORD=${REDIS_PASSWORD}
 
 WORKDIR /app
-COPY package.json ./
+COPY package*.json ./
 RUN npm install
 
 COPY . .
@@ -36,5 +36,5 @@ RUN npm run test:e2e
 
 EXPOSE 3000
 
-CMD ["pm2-runtime", "start", "dist/main.js"]
+CMD ["node","dist/main"]
 

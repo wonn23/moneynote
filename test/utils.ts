@@ -38,7 +38,6 @@ export async function closeNestApplication(
       console.log('데이터베이스 이미 종료됨 혹은 초기화되지 않음')
     }
 
-    // Redis 연결 종료
     const redisService = app.get(ICACHE_SERVICE)
     const redisClient = redisService.cacheManager.store.getClient()
     await redisClient.quit()

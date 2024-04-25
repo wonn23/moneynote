@@ -1,4 +1,4 @@
-import { Controller, Post, Get } from '@nestjs/common'
+import { Controller, Post, Get, Req } from '@nestjs/common'
 import { AuthService } from '../services/auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
@@ -58,17 +58,17 @@ export class AuthController {
     return userId ? true : false
   }
 
-  // @Get('/google/login')
-  // @ApiOperation({
-  //   summary: '구글 로그인',
-  //   description: '구글 로그인을 통해 사용자를 인증합니다.',
-  // })
-  // @ApiResponse({ status: 200, description: 'success' })
-  // @ApiResponse({ status: 401, description: 'Unauthorized' })
-  // @UseGuards(GoogleAuthGuard)
-  // async googleAuth(@Req() req) {
-  //   console.log('GET google/login')
-  // }
+  @Get('/google/login')
+  @ApiOperation({
+    summary: '구글 로그인',
+    description: '구글 로그인을 통해 사용자를 인증합니다.',
+  })
+  @ApiResponse({ status: 200, description: 'success' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth(@Req() req) {
+    console.log(req)
+  }
 
   @Get('/google/callback')
   @ApiOperation({
