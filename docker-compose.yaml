@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .production.env
+    environment:
+      - NODE_ENV
+      - JWT_ACCESS_TOKEN_SECRET
+      - JWT_ACCESS_TOKEN_EXPIRATION_TIME
+      - JWT_REFRESH_TOKEN_SECRET
+      - JWT_REFRESH_TOKEN_EXPIRATION_TIME
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - REDIS_HOST
+      - REDIS_PORT
+      - REDIS_PASSWORD
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
