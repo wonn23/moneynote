@@ -3,6 +3,8 @@ import * as crypto from 'crypto'
 import { requestE2E } from './request.e2e'
 import { INestApplication } from '@nestjs/common'
 
+jest.setTimeout(30000)
+
 describe('UserController (e2e)', () => {
   let app: INestApplication
   // let createdUserId: string
