@@ -12,7 +12,7 @@ describe('BudgetController (e2e)', () => {
     app = await createNestApplication()
     const tokens = await setupLoggedIn(app)
     accessToken = tokens.accessToken
-  }, 10000)
+  })
 
   afterAll(async () => {
     await closeNestApplication(app)
@@ -43,7 +43,7 @@ describe('BudgetController (e2e)', () => {
       expect(response.body.category).toHaveProperty('id', 1)
       expect(response.body.category).toHaveProperty('name', '전체')
       expect(response.body).toHaveProperty('user')
-    }, 10000)
+    })
   })
 
   describe('/budgets/design : (POST) : 예산 추천 설계', () => {
@@ -73,7 +73,7 @@ describe('BudgetController (e2e)', () => {
         expect(expectedCategories).toContain(item.categoryName)
         expect(typeof item.budgetAmount).toBe('number')
       })
-    }, 10000)
+    })
   })
 
   describe('/budgets/ : (GET) : 연도별 예산 조회', () => {
@@ -99,7 +99,7 @@ describe('BudgetController (e2e)', () => {
         expect(item).toHaveProperty('category')
         expect(item).toHaveProperty('user')
       })
-    }, 10000)
+    })
 
     it('연도와 월별별 예산 조회 성공', async () => {
       const year = 2024
@@ -125,7 +125,7 @@ describe('BudgetController (e2e)', () => {
         expect(item).toHaveProperty('category')
         expect(item).toHaveProperty('user')
       })
-    }, 10000)
+    })
   })
 
   describe('/budgets/:id : (PUT) : 예산 수정', () => {
@@ -153,7 +153,7 @@ describe('BudgetController (e2e)', () => {
       expect(response.body).toHaveProperty('category')
       expect(response.body.category).toHaveProperty('name', '전체')
       expect(response.body).toHaveProperty('user')
-    }, 10000)
+    })
   })
 
   describe('/budgets/:id : (DELETE) : 예산 삭제', () => {
@@ -165,6 +165,6 @@ describe('BudgetController (e2e)', () => {
         200,
         accessToken,
       )
-    }, 10000)
+    })
   })
 })

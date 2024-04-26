@@ -9,7 +9,7 @@ describe('AuthController (e2e)', () => {
 
   beforeAll(async () => {
     app = await createNestApplication()
-  }, 10000)
+  })
 
   afterAll(async () => {
     closeNestApplication(app)
@@ -26,7 +26,7 @@ describe('AuthController (e2e)', () => {
       refreshToken = response.body.refreshToken
       expect(response.body).toHaveProperty('accessToken')
       expect(response.body).toHaveProperty('refreshToken')
-    }, 10000)
+    })
   })
 
   describe('/auth/refresh : (GET) : Access 토큰 재발급', () => {
@@ -40,7 +40,7 @@ describe('AuthController (e2e)', () => {
       )
 
       expect(response.body).toHaveProperty('accessToken')
-    }, 10000)
+    })
   })
 
   describe('/auth/logout : (POST) : 로그아웃', () => {
@@ -54,7 +54,7 @@ describe('AuthController (e2e)', () => {
       )
 
       expect(response.body.message).toEqual('로그아웃 성공.')
-    }, 10000)
+    })
   })
 
   describe('/auth/protected : (GET) : 로그인 확인', () => {
@@ -68,6 +68,6 @@ describe('AuthController (e2e)', () => {
       )
 
       expect(response.text).toEqual('true')
-    }, 10000)
+    })
   })
 })

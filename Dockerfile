@@ -10,6 +10,9 @@ COPY . .
 
 RUN npm run build
 
+RUN npm run test
+RUN npm run test:e2e
+
 FROM node:alpine as production
 
 ARG NODE_ENV=production
