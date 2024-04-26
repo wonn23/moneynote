@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Req } from '@nestjs/common'
-import { AuthService } from '../services/auth.service'
+import { AuthService } from './auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
   ApiBearerAuth,
@@ -8,13 +8,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
-import { CurrentUser } from '../../common/decorator/current-user.decorator'
-import { JwtAccessAuthGuard } from '../guard/jwt-access.guard'
-import { LocalAuthGuard } from '../guard/local.guard'
-import { JwtRefreshAuthGuard } from '../guard/jwt-refresh.guard'
-import { TokenResponse } from '../interfaces/token-response.interface'
+import { CurrentUser } from '../common/decorator/current-user.decorator'
+import { JwtAccessAuthGuard } from './guard/jwt-access.guard'
+import { LocalAuthGuard } from './guard/local.guard'
+import { JwtRefreshAuthGuard } from './guard/jwt-refresh.guard'
+import { TokenResponse } from './interfaces/token-response.interface'
 import { User } from 'src/user/entities/user.entity'
-import { GoogleAuthGuard } from '../guard/google.guard'
+import { GoogleAuthGuard } from './guard/google.guard'
 
 @ApiTags('인증')
 @Controller('auth')

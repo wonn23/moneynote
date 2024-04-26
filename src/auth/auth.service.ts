@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config'
 import { User } from 'src/user/entities/user.entity'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
 import { ICacheService } from 'src/cache/cache.service.interface'
-import { TokenResponse } from '../interfaces/token-response.interface'
+import { TokenResponse } from './interfaces/token-response.interface'
 import { UserRepository } from 'src/user/user.repository'
 
 @Injectable()
