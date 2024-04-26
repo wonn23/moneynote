@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common'
 import { requestE2E } from './request.e2e'
 import { closeNestApplication, createNestApplication } from './utils'
 
-jest.setTimeout(30000)
+jest.setTimeout(20000)
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication

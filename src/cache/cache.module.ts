@@ -10,7 +10,7 @@ import { CacheProvider } from './cache.provider'
     CacheModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
         store: redisStore,
-        host: configService.get('REDIS_HOST', 'localhost'),
+        host: configService.get('REDIS_HOST', 'redis'),
         port: +configService.get('REDIS_PORT', '6379'),
         password: configService.get('REDIS_PASSWORD', '0000'),
       }),
