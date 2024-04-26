@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   secrets-manager:
-    DATABASE_URL: 'arn:aws:secretsmanager:ap-northeast-2:756683176405:secret:prod/moneynote/postgres-0h67jr'
+    DATABASE_URL: arn:aws:secretsmanager:ap-northeast-2:756683176405:secret:prod/moneynote/postgres-0h67jr
 
 phases:
   pre_build:
