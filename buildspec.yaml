@@ -1,6 +1,6 @@
 version: 0.2
 
-phase:
+phases:
   pre_build:
     commands:
       - aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 756683176405.dkr.ecr.ap-northeast-2.amazonaws.com
