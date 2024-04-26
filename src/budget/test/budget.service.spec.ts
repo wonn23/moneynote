@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { BudgetService } from '../services/budget.service'
+import { BudgetService } from '../budget.service'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { Budget } from '../entities/budget.entity'
 import { Category } from '../entities/category.entity'
@@ -19,7 +19,7 @@ import {
   MockServiceFactory,
 } from 'src/common/utils/mock-service.factory'
 import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
-import { DefaultBudgetDesignStrategy } from '../services/default-budget-design-strategy'
+import { DefaultBudgetDesignStrategy } from '../default-budget-design-strategy'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 
 jest.mock('typeorm-transactional', () => ({

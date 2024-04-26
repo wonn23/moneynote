@@ -3,7 +3,7 @@ import {
   BudgetAmount,
   IBudgetDesignStrategy,
   Ratio,
-} from '../interfaces/budget-design.interface'
+} from './interfaces/budget-design.interface'
 
 @Injectable()
 export class DefaultBudgetDesignStrategy implements IBudgetDesignStrategy {

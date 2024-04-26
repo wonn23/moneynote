@@ -27,7 +27,7 @@ import {
   IEXPENSE_MESSAGE_SERVICE,
 } from 'src/common/utils/constants'
 import { ExpenseCalculationService } from '../services/expense.calculation.service'
-import { BudgetService } from 'src/budget/services/budget.service'
+import { BudgetService } from 'src/budget/budget.service'
 import { ExpenseMessageService } from '../services/expense.message.service'
 import { Category } from 'src/budget/entities/category.entity'
 import { Expense } from '../entities/expense.entity'

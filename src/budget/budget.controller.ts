@@ -11,9 +11,9 @@ import {
   Inject,
   Query,
 } from '@nestjs/common'
-import { UpdateBudgetDto } from '../dto/update-budget.dto'
-import { CreateBudgetDto } from '../dto/create-budget.dto'
-import { Budget } from '../entities/budget.entity'
+import { UpdateBudgetDto } from './dto/update-budget.dto'
+import { CreateBudgetDto } from './dto/create-budget.dto'
+import { Budget } from './entities/budget.entity'
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -28,8 +28,8 @@ import {
 } from '@nestjs/swagger'
 import { CurrentUser } from 'src/common/decorator/current-user.decorator'
 import { IBUDGET_SERVICE } from 'src/common/utils/constants'
-import { IBudgetService } from '../interfaces/budget.service.interface'
-import { BudgetAmount } from '../interfaces/budget-design.interface'
+import { IBudgetService } from './interfaces/budget.service.interface'
+import { BudgetAmount } from './interfaces/budget-design.interface'
 import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('예산')

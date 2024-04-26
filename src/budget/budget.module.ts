@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { BudgetController } from './controllers/budget.controller'
+import { BudgetController } from './budget.controller'
 import { PassportModule } from '@nestjs/passport'
 import { BudgetProvider } from './budget.provider'
 import { TypeOrmExModule } from 'src/common/decorator/typeorm-ex.module'

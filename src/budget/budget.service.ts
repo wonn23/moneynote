@@ -1,17 +1,17 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common'
-import { UpdateBudgetDto } from '../dto/update-budget.dto'
-import { CreateBudgetDto } from '../dto/create-budget.dto'
-import { Budget } from '../entities/budget.entity'
+import { UpdateBudgetDto } from './dto/update-budget.dto'
+import { CreateBudgetDto } from './dto/create-budget.dto'
+import { Budget } from './entities/budget.entity'
 import { Transactional } from 'typeorm-transactional'
-import { IBudgetService } from '../interfaces/budget.service.interface'
+import { IBudgetService } from './interfaces/budget.service.interface'
 import {
   Ratio,
   BudgetAmount,
   IBudgetDesignStrategy,
-} from '../interfaces/budget-design.interface'
+} from './interfaces/budget-design.interface'
 import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
-import { BudgetRepository } from '../budget.repository'
-import { CategoryRepository } from '../category.repository'
+import { BudgetRepository } from './budget.repository'
+import { CategoryRepository } from './category.repository'
 
 @Injectable()
 export class BudgetService implements IBudgetService {

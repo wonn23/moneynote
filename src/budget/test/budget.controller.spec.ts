@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { BudgetController } from '../controllers/budget.controller'
+import { BudgetController } from '../budget.controller'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 import { categoryEnum } from '../types/budget.enum'
 import { User } from 'src/user/entities/user.entity'
@@ -13,7 +13,7 @@ import {
 import { IBUDGET_SERVICE } from 'src/common/utils/constants'
 import { IBudgetService } from '../interfaces/budget.service.interface'
 import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
-import { BudgetService } from '../services/budget.service'
+import { BudgetService } from '../budget.service'
 import { BudgetAmount } from '../interfaces/budget-design.interface'
 
 const mockUser = {
