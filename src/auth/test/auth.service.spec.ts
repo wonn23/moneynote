@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { AuthService } from '../services/auth.service'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcryptjs'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { User } from 'src/user/entities/user.entity'
 import {

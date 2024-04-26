@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcryptjs'
 import { ConfigService } from '@nestjs/config'
 import { User } from 'src/user/entities/user.entity'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
