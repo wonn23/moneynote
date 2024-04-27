@@ -6,7 +6,6 @@ import { Between } from 'typeorm'
 import { Category } from 'src/budget/entities/category.entity'
 import { User } from 'src/user/entities/user.entity'
 import { IExpenseSerivce } from '../interfaces/expense.service.interface'
-import { Transactional } from 'typeorm-transactional'
 import {
   ExpenseAmount,
   RecommendedExpense,
@@ -41,7 +40,6 @@ export class ExpenseService implements IExpenseSerivce {
     private budgetservice: IBudgetService,
   ) {}
 
-  @Transactional()
   async createExpense(
     createExpenseDto: CreateExpenseDto,
     userId: string,
@@ -115,7 +113,6 @@ export class ExpenseService implements IExpenseSerivce {
     return expense
   }
 
-  @Transactional()
   async updateExpense(
     expenseId: number,
     updateExpenseDto: UpdateExpenseDto,

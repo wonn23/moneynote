@@ -22,10 +22,6 @@ import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
 import { DefaultBudgetDesignStrategy } from '../default-budget-design-strategy'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 
-jest.mock('typeorm-transactional', () => ({
-  Transactional: () => () => ({}),
-}))
-
 const mockUser = {
   id: 'testUserId',
   username: 'testUsername',
@@ -67,8 +63,12 @@ describe('BudgetService', () => {
     budgetRepository = module.get(getRepositoryToken(BudgetRepository))
     categoryRepository = module.get(getRepositoryToken(CategoryRepository))
     budgetDesignStrategy = module.get(IBUDGET_DESIGN_STRAGTEGY)
+  })
 
+  afterAll(async () => {
     jest.clearAllMocks()
+    jest.resetAllMocks()
+    jest.restoreAllMocks()
   })
 
   it('should be defined', () => {

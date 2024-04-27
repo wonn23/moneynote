@@ -32,10 +32,6 @@ import { ExpenseMessageService } from '../services/expense.message.service'
 import { Category } from 'src/budget/entities/category.entity'
 import { Expense } from '../entities/expense.entity'
 
-jest.mock('typeorm-transactional', () => ({
-  Transactional: () => () => ({}),
-}))
-
 const mockUser = {
   id: 'testUserId',
   username: 'testUsername',
@@ -108,8 +104,10 @@ describe('ExpenseService', () => {
     budgetService = module.get(IBUDGET_SERVICE)
   })
 
-  afterEach(() => {
+  afterAll(async () => {
     jest.clearAllMocks()
+    jest.resetAllMocks()
+    jest.restoreAllMocks()
   })
 
   it('should be defined', () => {

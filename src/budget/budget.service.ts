@@ -2,7 +2,6 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { UpdateBudgetDto } from './dto/update-budget.dto'
 import { CreateBudgetDto } from './dto/create-budget.dto'
 import { Budget } from './entities/budget.entity'
-import { Transactional } from 'typeorm-transactional'
 import { IBudgetService } from './interfaces/budget.service.interface'
 import {
   Ratio,
@@ -22,7 +21,6 @@ export class BudgetService implements IBudgetService {
     private readonly budgetDesignStrategy: IBudgetDesignStrategy,
   ) {}
 
-  @Transactional()
   async createBudget(
     createBudgetDto: CreateBudgetDto,
     userId: string,
@@ -125,7 +123,6 @@ export class BudgetService implements IBudgetService {
     return budgets
   }
 
-  @Transactional()
   async updateBudget(
     id: number,
     updateBudgetDto: UpdateBudgetDto,

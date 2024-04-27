@@ -37,7 +37,9 @@ import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 @UseGuards(JwtAccessAuthGuard)
 @Controller('budgets')
 export class BudgetController {
-  constructor(@Inject(IBUDGET_SERVICE) private budgetService: IBudgetService) {}
+  constructor(
+    @Inject(IBUDGET_SERVICE) private readonly budgetService: IBudgetService,
+  ) {}
 
   @Post()
   @ApiOperation({

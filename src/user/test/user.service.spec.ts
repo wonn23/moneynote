@@ -11,10 +11,6 @@ import { UserRepository } from '../user.repository'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { UpdateUserDto } from '../dto/update-user.dto'
 
-jest.mock('typeorm-transactional', () => ({
-  Transactional: () => () => ({}),
-}))
-
 describe('UserService', () => {
   let userService: UserService
   let userRepository: MockRepository<UserRepository>

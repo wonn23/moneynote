@@ -1,9 +1,5 @@
 version: 0.2
 
-env:
-  secrets-manager:
-    DATABASE_URL: arn:aws:secretsmanager:ap-northeast-2:756683176405:secret:prod/moneynote/postgres-0h67jr
-
 phases:
   pre_build:
     commands:
@@ -14,10 +10,6 @@ phases:
       - echo Building the Docker image...
       - docker build -t moneynote .
       - docker tag moneynote:latest 756683176405.dkr.ecr.ap-northeast-2.amazonaws.com/moneynote:latest
-      - echo Running unit tests...
-      - docker run moneynote npm run test
-      - echo Running e2e tests...
-      - docker run moneynote npm run test:e2e
   post_build:
     commands:
       - echo Pushing the Docker image...

@@ -61,6 +61,12 @@ describe('BudgetController', () => {
     budgetService = module.get(IBUDGET_SERVICE)
   })
 
+  afterAll(async () => {
+    jest.clearAllMocks()
+    jest.resetAllMocks()
+    jest.restoreAllMocks()
+  })
+
   it('should be defined', () => {
     expect(budgetController).toBeDefined()
     expect(budgetService).toBeDefined()

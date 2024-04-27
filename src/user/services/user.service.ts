@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common'
 import { User } from '../entities/user.entity'
 import * as bcrypt from 'bcryptjs'
-import { Transactional } from 'typeorm-transactional'
 import { CreateUser } from '../interface/user.interface'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { UpdateUserDto } from '../dto/update-user.dto'
@@ -15,7 +14,6 @@ import { UserRepository } from '../user.repository'
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  @Transactional()
   async register(createUserDto: CreateUserDto): Promise<CreateUser> {
     const { username, email, password, consultingYn } = createUserDto
 
@@ -57,7 +55,6 @@ export class UserService {
     return newUser
   }
 
-  @Transactional()
   async update(userId: string, updateUserDto: UpdateUserDto): Promise<void> {
     const user = await this.userRepository.findOneBy({ id: userId })
     if (!user) {

@@ -2,12 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication, ValidationPipe } from '@nestjs/common'
 import { AppModule } from '../src/app.module'
 import { HttpExceptionFilter } from '../src/common/exceptions/http-exception.filter'
-import { initializeTransactionalContext } from 'typeorm-transactional'
 import { DataSource } from 'typeorm'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
 
 export async function createNestApplication(): Promise<INestApplication> {
-  initializeTransactionalContext()
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
   }).compile()

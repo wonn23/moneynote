@@ -16,7 +16,7 @@ import { UserRepository } from 'src/user/user.repository'
 @Injectable()
 export class AuthService {
   constructor(
-    private usersRepository: UserRepository,
+    private readonly usersRepository: UserRepository,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     @Inject(ICACHE_SERVICE)
