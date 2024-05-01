@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ExpenseController } from '../controllers/expense.controller'
-import { ExpenseService } from '../services/expense.service'
+import { ExpenseController } from '../expense.controller'
+import { ExpenseService } from '../expense.service'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
 import { Expense } from '../entities/expense.entity'

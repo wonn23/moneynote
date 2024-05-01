@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { User } from '../entities/user.entity'
-import { UserService } from '../services/user.service'
+import { UserService } from '../user.service'
 import {
   MockRepository,
   MockRepositoryFactory,

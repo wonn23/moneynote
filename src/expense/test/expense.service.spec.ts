@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ExpenseService } from '../services/expense.service'
+import { ExpenseService } from '../expense.service'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { CreateExpenseDto } from '../dto/create-expense.dto'
 import { categoryEnum } from 'src/budget/types/budget.enum'
@@ -26,9 +26,9 @@ import {
   IEXPENSE_CALCULATION_SERVICE,
   IEXPENSE_MESSAGE_SERVICE,
 } from 'src/common/utils/constants'
-import { ExpenseCalculationService } from '../services/expense.calculation.service'
+import { ExpenseCalculationService } from '../expense.calculation.service'
 import { BudgetService } from 'src/budget/budget.service'
-import { ExpenseMessageService } from '../services/expense.message.service'
+import { ExpenseMessageService } from '../expense.message.service'
 import { Category } from 'src/budget/entities/category.entity'
 import { Expense } from '../entities/expense.entity'
 

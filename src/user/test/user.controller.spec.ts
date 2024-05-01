@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { UserController } from '../controllers/user.controller'
-import { UserService } from '../services/user.service'
+import { UserController } from '../user.controller'
+import { UserService } from '../user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { ForbiddenException } from '@nestjs/common'
 import {

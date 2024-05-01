@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
-import { IExpenseCalculationService } from '../interfaces/expense.calculation.service.interface'
+import { IExpenseCalculationService } from './interfaces/expense.calculation.service.interface'
 import { Budget } from 'src/budget/entities/budget.entity'
 import {
   ExpenseAmount,
   RecommendedExpenseAmount,
-} from '../interfaces/expense-recommend.interface'
-import { GuideExpense } from '../interfaces/expense-guide.interface'
+} from './interfaces/expense-recommend.interface'
+import { GuideExpense } from './interfaces/expense-guide.interface'
 
 @Injectable()
 export class ExpenseCalculationService implements IExpenseCalculationService {

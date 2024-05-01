@@ -1,4 +1,4 @@
-import { IEXPENSE_SERVICE } from '../../common/utils/constants'
+import { IEXPENSE_SERVICE } from '../common/utils/constants'
 import {
   Controller,
   Get,
@@ -12,9 +12,9 @@ import {
   Inject,
   Query,
 } from '@nestjs/common'
-import { CreateExpenseDto } from '../dto/create-expense.dto'
-import { UpdateExpenseDto } from '../dto/update-expense.dto'
-import { Expense } from '../entities/expense.entity'
+import { CreateExpenseDto } from './dto/create-expense.dto'
+import { UpdateExpenseDto } from './dto/update-expense.dto'
+import { Expense } from './entities/expense.entity'
 import { CurrentUser } from 'src/common/decorator/current-user.decorator'
 import {
   ApiBearerAuth,
@@ -25,8 +25,8 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger'
-import { IExpenseSerivce } from '../interfaces/expense.service.interface'
-import { RecommendedExpense } from '../interfaces/expense-recommend.interface'
+import { IExpenseSerivce } from './interfaces/expense.service.interface'
+import { RecommendedExpense } from './interfaces/expense-recommend.interface'
 import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('지출')

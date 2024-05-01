@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { ExpenseController } from './controllers/expense.controller'
+import { ExpenseController } from './expense.controller'
 import { PassportModule } from '@nestjs/passport'
 import { ExpenseProvider } from './expense.provider'
 import { BudgetModule } from 'src/budget/budget.module'

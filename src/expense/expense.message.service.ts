@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { IExpenseMessageService } from '../interfaces/expense.message.service.interface'
+import { IExpenseMessageService } from './interfaces/expense.message.service.interface'
 
 @Injectable()
 export class ExpenseMessageService implements IExpenseMessageService {
