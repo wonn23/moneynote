@@ -61,6 +61,7 @@ jobs:
     name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
+      # 3000에서 3000포트로 보낸다
       - name: Pull image and run
         run: |
           docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
