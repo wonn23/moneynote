@@ -35,23 +35,23 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         run: |
           docker build -t $IMAGE_NAME:latest \
-            --build-arg PORT=3000 \
-            --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
-            --build-arg DB_PORT=${{ secrets.DB_PORT }} \
-            --build-arg DB_USERNAME=${{ secrets.DB_USERNAME }} \
-            --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-            --build-arg DB_DATABASE=${{ secrets.DB_DATABASE }} \
-            --build-arg DB_SYNCHRONIZE=${{ secrets.DB_SYNCHRONIZE }} \
-            --build-arg REDIS_HOST=${{ secrets.REDIS_HOST }} \
-            --build-arg REDIS_PORT=${{ secrets.REDIS_PORT }} \
-            --build-arg JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }} \
-            --build-arg JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }} \
-            --build-arg JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }} \
-            --build-arg JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }} \
-            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-            --build-arg GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }} \
-            .
+          --build-arg PORT=3000 \
+          --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
+          --build-arg DB_PORT=${{ secrets.DB_PORT }} \
+          --build-arg DB_USERNAME=${{ secrets.DB_USERNAME }} \
+          --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+          --build-arg DB_DATABASE=${{ secrets.DB_DATABASE }} \
+          --build-arg DB_SYNCHRONIZE=${{ secrets.DB_SYNCHRONIZE }} \
+          --build-arg REDIS_HOST=${{ secrets.REDIS_HOST }} \
+          --build-arg REDIS_PORT=${{ secrets.REDIS_PORT }} \
+          --build-arg JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }} \
+          --build-arg JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }} \
+          --build-arg JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }} \
+          --build-arg JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }} \
+          --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+          --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+          --build-arg GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }} \
+          .
           docker tag $IMAGE_NAME:latest ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
           docker push ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
 
