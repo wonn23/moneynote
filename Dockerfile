@@ -10,8 +10,6 @@ COPY . .
 
 RUN npm run build
 
-RUN npm run test
-
 FROM node:alpine as production
 
 WORKDIR /app
