@@ -1,6 +1,7 @@
 FROM node:20-alpine as development
 
 # 환경변수 설정
+
 ARG NODE_ENV=development
 ARG PORT
 ARG DB_HOSTNAME
