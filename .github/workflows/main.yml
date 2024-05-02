@@ -61,7 +61,6 @@ jobs:
     name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
-      # 3000 -> 80 포트로 수행하도록 지정
       - name: Pull image and run
         run: |
           docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
