@@ -35,7 +35,6 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         run: |
           docker build -t $IMAGE_NAME:latest \
-            --build-arg NODE_ENV=production \
             --build-arg PORT=3000 \
             --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
             --build-arg DB_PORT=${{ secrets.DB_PORT }} \
