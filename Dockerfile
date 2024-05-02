@@ -1,4 +1,4 @@
-FROM node:alpine as development
+FROM node:20-alpine as development
 
 # 환경변수 설정
 ARG NODE_ENV
@@ -23,7 +23,7 @@ ARG GOOGLE_CALLBACK_URL
 ENV NODE_ENV=$NODE_ENV
 ENV PORT=$PORT
 ENV DB_HOSTNAME=$DB_HOSTNAME
-ENV DB_PORT=$DB_USERNAME
+ENV DB_PORT=$DB_PORT
 ENV DB_USERNAME=$DB_USERNAME
 ENV DB_PASSWORD=$DB_PASSWORD
 ENV DB_DATABASE=$DB_DATABASE
@@ -43,17 +43,13 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# rimraf를 글로벌로 설치
-RUN npm install -g rimraf
-
-# 모든 의존성 설치
 RUN npm install
 
 COPY . .
 
 RUN npm run build
 
-FROM node:alpine as production
+FROM node:20-alpine as production
 
 WORKDIR /app
 
