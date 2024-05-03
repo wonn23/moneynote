@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # aws에 로그인 후 ECR에 푸시
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v2
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,30 +30,12 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login too Amazon ECR
-        run: aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker build -t $IMAGE_NAME:latest \
-            --build-arg PORT=3000 \
-            --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
-            --build-arg DB_PORT=${{ secrets.DB_PORT }} \
-            --build-arg DB_USERNAME=${{ secrets.DB_USERNAME }} \
-            --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-            --build-arg DB_DATABASE=${{ secrets.DB_DATABASE }} \
-            --build-arg DB_SYNCHRONIZE=${{ secrets.DB_SYNCHRONIZE }} \
-            --build-arg REDIS_HOST=${{ secrets.REDIS_HOST }} \
-            --build-arg REDIS_PORT=${{ secrets.REDIS_PORT }} \
-            --build-arg JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }} \
-            --build-arg JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }} \
-            --build-arg JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }} \
-            --build-arg JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }} \
-            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-            --build-arg GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }} \
-            .
-          docker tag $IMAGE_NAME:latest ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
-          docker push ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml push
 
   # 배포 Job
   deploy:
@@ -61,11 +43,7 @@ jobs:
     name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
-      # redis host를 EC2 private IP로 하고 redis docker 실행함
-      - name: Pull image and run
+      - name: Pull and run with Docker Compose
         run: |
-          docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
-          docker stop ${{ env.CONTAINER_NAME }} || true
-          docker rm ${{ env.CONTAINER_NAME }} || true
-          docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
-          docker run -d -p 3000:3000 --env-file /home/ubuntu/moneynote-BE/.production.env --name ${{ env.CONTAINER_NAME }} --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker-compose -f docker-compose.yml pull
+          docker-compose -f docker-compose.yml up -d
