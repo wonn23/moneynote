@@ -102,6 +102,5 @@ jobs:
           docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
           docker run -d -p 3000:3000 \
             --network="host" \
-            --env-file /home/ubuntu/moneynote-BE/.production.env
             --name ${{ env.CONTAINER_NAME }} \
             --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
