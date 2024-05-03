@@ -100,7 +100,7 @@ jobs:
           docker stop ${{ env.CONTAINER_NAME }} || true
           docker rm ${{ env.CONTAINER_NAME }} || true
           docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
-          docker run -d -p 3000:3000 \ 
+          docker run -d -p 3000:3000 \
             --network="host" \
             --name ${{ env.CONTAINER_NAME }} \
             --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
