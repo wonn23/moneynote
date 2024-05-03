@@ -15,12 +15,45 @@ env:
 
 jobs:
   # 빌드 Job
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Nodejs 21
+        uses: actions/setup-node@v3
+        with:
+          node-version: 21.7.3
+          cache: 'npm'
+
+      - name: Setting .production.env
+        run: |
+          echo "PORT=${{ secrets.PORT }}" >> .production.env
+          echo "DB_HOSTNAME=${{ secrets.DB_HOSTNAME }}" >> .production.env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .production.env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .production.env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .production.env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .production.env
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .production.env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .production.env
+          echo "JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }}" >> .production.env
+          echo "JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }}" >> .production.env
+          echo "JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET}}" >> .production.env
+          echo "JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }}" >> .production.env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .production.env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .production.env
+          echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .production.env
+          cat .production.env
+
+      - run: npm install
+      - run: npm run test
+
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       # aws에 로그인 후 ECR에 푸시
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,12 +63,29 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login too Amazon ECR
-        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+        run: aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker-compose -f docker-compose.yml build
-          docker-compose -f docker-compose.yml push
+          docker build -t $IMAGE_NAME:latest \
+            --build-arg PORT=${{ secrets.PORT }} \
+            --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
+            --build-arg DB_PORT=${{ secrets.DB_PORT }} \
+            --build-arg DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            --build-arg DB_DATABASE=${{ secrets.DB_DATABASE }} \
+            --build-arg REDIS_HOST=${{ secrets.REDIS_HOST }} \
+            --build-arg REDIS_PORT=${{ secrets.REDIS_PORT }} \
+            --build-arg JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }} \
+            --build-arg JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }} \
+            --build-arg JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }} \
+            --build-arg JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }} \
+            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+            --build-arg GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }} \
+            .
+          docker tag $IMAGE_NAME:latest ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker push ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
 
   # 배포 Job
   deploy:
@@ -43,7 +93,14 @@ jobs:
     name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
-      - name: Pull and run with Docker Compose
+      # redis host를 EC2 private IP로 하고 redis docker 실행함
+      - name: Pull image and run
         run: |
-          docker-compose -f docker-compose.yml pull
-          docker-compose -f docker-compose.yml up -d
+          docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker stop ${{ env.CONTAINER_NAME }} || true
+          docker rm ${{ env.CONTAINER_NAME }} || true
+          docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
+          docker run -d -p 3000:3000 \ 
+            --network="host"
+            --name ${{ env.CONTAINER_NAME }} 
+            --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
