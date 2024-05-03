@@ -18,10 +18,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Nodejs 21
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 21.7.3
           cache: 'npm'
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # aws에 로그인 후 ECR에 푸시
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -101,6 +101,6 @@ jobs:
           docker rm ${{ env.CONTAINER_NAME }} || true
           docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
           docker run -d -p 3000:3000 \ 
-            --network="host"
-            --name ${{ env.CONTAINER_NAME }} 
+            --network="host" \
+            --name ${{ env.CONTAINER_NAME }} \
             --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
