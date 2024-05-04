@@ -14,6 +14,7 @@ env:
   CONTAINER_NAME: moneynote-server
 
 jobs:
+  # test job
   test:
     runs-on: ubuntu-latest
     steps:
@@ -27,6 +28,7 @@ jobs:
       - run: npm install
       - run: npm run test
 
+  # build job
   build:
     needs: test # test 성공 후에 실행되도록 정의
     runs-on: ubuntu-latest
