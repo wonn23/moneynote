@@ -93,14 +93,14 @@ jobs:
     name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
-      # redis host를 EC2 private IP로 하고 redis docker 실행함
+      # 80번 포트와 컨테이너 3000포트 연결
       - name: Pull image and run
         run: |
           docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
           docker stop ${{ env.CONTAINER_NAME }} || true
           docker rm ${{ env.CONTAINER_NAME }} || true
           docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
-          docker run -d -p 3000:3000 \
+          docker run -d -p 80:3000 \
             --network="host" \
             --env-file /home/ubuntu/moneynote-BE/.production.env \
             --name ${{ env.CONTAINER_NAME }} \
