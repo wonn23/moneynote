@@ -18,38 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Nodejs 21
+      - name: Node.js Setup
         uses: actions/setup-node@v4
         with:
           node-version: 21.7.3
           cache: 'npm'
-
-      - name: Setting .env
-        run: |
-          echo "PORT=${{ secrets.PORT }}" >> .env
-          echo "DB_HOSTNAME=${{ secrets.DB_HOSTNAME }}" >> .env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
-          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
-          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
-          echo "JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }}" >> .env
-          echo "JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }}" >> .env
-          echo "JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET}}" >> .env
-          echo "JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }}" >> .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .env
-          cat .env
 
       - run: npm install
       - run: npm run test
 
   build:
     needs: test # test 성공 후에 실행되도록 정의
-    name: Build
     runs-on: ubuntu-latest
     steps:
       # aws에 로그인 후 ECR에 푸시
@@ -67,30 +46,13 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker build -t $IMAGE_NAME:latest \
-            --build-arg PORT=${{ secrets.PORT }} \
-            --build-arg DB_HOSTNAME=${{ secrets.DB_HOSTNAME }} \
-            --build-arg DB_PORT=${{ secrets.DB_PORT }} \
-            --build-arg DB_USERNAME=${{ secrets.DB_USERNAME }} \
-            --build-arg DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-            --build-arg DB_DATABASE=${{ secrets.DB_DATABASE }} \
-            --build-arg REDIS_HOST=${{ secrets.REDIS_HOST }} \
-            --build-arg REDIS_PORT=${{ secrets.REDIS_PORT }} \
-            --build-arg JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }} \
-            --build-arg JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }} \
-            --build-arg JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }} \
-            --build-arg JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }} \
-            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-            --build-arg GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }} \
-            .
+          docker build -t $IMAGE_NAME:latest .
           docker tag $IMAGE_NAME:latest ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
           docker push ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
 
   # 배포 Job
   deploy:
     needs: build # build 후에 실행되도록 정의
-    name: Deploy
     runs-on: [self-hosted, moneynote] # AWS ./configure에서 사용할 label명
     steps:
       # 80번 포트와 컨테이너 3000포트 연결
