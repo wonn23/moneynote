@@ -14,7 +14,6 @@ env:
   CONTAINER_NAME: moneynote-server
 
 jobs:
-  # 빌드 Job
   test:
     runs-on: ubuntu-latest
     steps:
@@ -49,6 +48,8 @@ jobs:
       - run: npm run test
 
   build:
+    needs: test # test 성공 후에 실행되도록 정의
+    if: ${{ success() }}
     name: Build
     runs-on: ubuntu-latest
     steps:
