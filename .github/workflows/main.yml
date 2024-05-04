@@ -46,10 +46,10 @@ jobs:
 
       - run: npm install
       - run: npm run test
+      - run: npm run test:e2e
 
   build:
     needs: test # test 성공 후에 실행되도록 정의
-    if: ${{ success() }}
     name: Build
     runs-on: ubuntu-latest
     steps:
