@@ -46,9 +46,9 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker build -t $IMAGE_NAME:latest .
-          docker tag $IMAGE_NAME:latest ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
-          docker push ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker build -t ${{ env.IMAGE_NAME }}:latest .
+          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
   # 배포 Job
   deploy:
@@ -58,12 +58,12 @@ jobs:
       # 80번 포트와 컨테이너 3000포트 연결
       - name: Pull image and run
         run: |
-          docker pull ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+          docker pull ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           docker stop ${{ env.CONTAINER_NAME }} || true
           docker rm ${{ env.CONTAINER_NAME }} || true
-          docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
+          docker rmi ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
           docker run -d -p 80:3000 \
             --network="host" \
             --env-file /home/ubuntu/moneynote-BE/.production.env \
             --name ${{ env.CONTAINER_NAME }} \
-            --restart always ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest
+            --restart always ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
