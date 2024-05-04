@@ -26,27 +26,28 @@ jobs:
           node-version: 21.7.3
           cache: 'npm'
 
-      - name: Setting .production.env
+      - name: Setting .env
         run: |
-          echo "PORT=${{ secrets.PORT }}" >> .production.env
-          echo "DB_HOSTNAME=${{ secrets.DB_HOSTNAME }}" >> .production.env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .production.env
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .production.env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .production.env
-          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .production.env
-          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .production.env
-          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .production.env
-          echo "JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }}" >> .production.env
-          echo "JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }}" >> .production.env
-          echo "JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET}}" >> .production.env
-          echo "JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }}" >> .production.env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .production.env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .production.env
-          echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .production.env
-          cat .production.env
+          echo "PORT=${{ secrets.PORT }}" >> .env
+          echo "DB_HOSTNAME=${{ secrets.DB_HOSTNAME }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }}" >> .env
+          echo "JWT_ACCESS_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_ACCESS_TOKEN_EXPIRATION_TIME }}" >> .env
+          echo "JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET}}" >> .env
+          echo "JWT_REFRESH_TOKEN_EXPIRATION_TIME=${{ secrets.JWT_REFRESH_TOKEN_EXPIRATION_TIME }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .env
+          cat .env
 
       - run: npm install
       - run: npm run test
+      - run: npm run test:e2e
 
   build:
     name: Build
@@ -100,7 +101,7 @@ jobs:
           docker stop ${{ env.CONTAINER_NAME }} || true
           docker rm ${{ env.CONTAINER_NAME }} || true
           docker rmi ${{ env.ECR_REGISTRY }}/$IMAGE_NAME:latest || true
-          docker run -d -p 80:3000 \
+          docker run -d -p 3000:3000 \
             --network="host" \
             --env-file /home/ubuntu/moneynote-BE/.production.env \
             --name ${{ env.CONTAINER_NAME }} \
