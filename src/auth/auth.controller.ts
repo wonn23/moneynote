@@ -16,7 +16,7 @@ import { TokenResponse } from './interfaces/token-response.interface'
 import { User } from 'src/user/entities/user.entity'
 import { GoogleAuthGuard } from './guard/google.guard'
 
-@ApiTags('인증')
+@ApiTags('인증/인가')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

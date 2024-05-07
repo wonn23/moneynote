@@ -1,7 +1,5 @@
 FROM node:21-alpine AS development
 
-# 환경변수 설정
-
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}
 
