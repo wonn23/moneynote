@@ -168,7 +168,7 @@ export class ExpenseService implements IExpenseSerivce {
     const budgets = await this.budgetservice.findBudgets(userId, year, month)
 
     // 1일부터 오늘까지 사용한 지출액
-    const expenses = await this.fetchExpensesForPeriod(
+    const expenses = await this.getExpensesForPeriod(
       userId,
       firstOfTheMonth,
       lastOfTheMonth,
@@ -212,7 +212,7 @@ export class ExpenseService implements IExpenseSerivce {
     }
   }
 
-  private async fetchExpensesForPeriod(
+  private async getExpensesForPeriod(
     userId: string,
     startDate: Date,
     endDate: Date,
@@ -243,7 +243,7 @@ export class ExpenseService implements IExpenseSerivce {
     const recommendedExpenses = await this.recommendExpense(userId)
 
     // 오늘 기준 사용한 금액
-    const actualExpenses = await this.fetchExpensesForPeriod(
+    const actualExpenses = await this.getExpensesForPeriod(
       userId,
       today,
       tomorrow,
@@ -261,13 +261,13 @@ export class ExpenseService implements IExpenseSerivce {
     userId: string,
   ): Promise<ExpenseCompatisonResult[]> {
     const today = new Date()
-    const thisMonthExpenses = await this.fetchExpensesForPeriod(
+    const thisMonthExpenses = await this.getExpensesForPeriod(
       userId,
       this.getStartOfMonth(today),
       today,
     )
 
-    const lastMonthExpenses = await this.fetchExpensesForPeriod(
+    const lastMonthExpenses = await this.getExpensesForPeriod(
       userId,
       this.getStartOfLastMonth(today),
       this.getEndOfLastMonth(today),
@@ -309,52 +309,44 @@ export class ExpenseService implements IExpenseSerivce {
 
   async compareRatioToLastWeek(userId: string) {
     const today = new Date()
-    const dayOfWeek = today.getDay()
+    const startOfThisWeek = this.getStartOfWeek(today)
+    const startOfLastWeek = new Date(startOfThisWeek)
+    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7)
 
-    const thisDay = new Date(today)
-    thisDay.setDate(today.getDate() - (dayOfWeek - 1))
+    const endOfLastWeek = new Date(startOfThisWeek)
+    const startOfNextWeek = new Date(startOfThisWeek)
+    startOfNextWeek.setDate(startOfThisWeek.getDate() + 7)
 
-    const lastDay = new Date(thisDay)
-    lastDay.setDate(thisDay.getDate() - 7)
+    const lastWeekExpenditures = await this.getExpensesForPeriod(
+      userId,
+      startOfLastWeek,
+      endOfLastWeek,
+    )
 
-    const nextToThisDay = new Date(thisDay)
-    nextToThisDay.setDate(thisDay.getDate() + 1)
+    const thisWeekExpenditures = await this.getExpensesForPeriod(
+      userId,
+      startOfThisWeek,
+      startOfNextWeek,
+    )
 
-    const lastDayExpenditure = this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'amount')
-      .where('expense.spent_date >= :lastDay', { lastDay })
-      .andWhere('expense.spent_date < :thisDay', { thisDay })
-      .andWhere('expense.user_id = :userId', { userId })
-      .groupBy('expense.category_id')
-      .getRawMany()
+    return this.calculateExpenditureRaitos(
+      lastWeekExpenditures,
+      thisWeekExpenditures,
+    )
+  }
 
-    const thisDayExpenditure = this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('expense.category_id', 'categoryId')
-      .addSelect('SUM(expense.amount)', 'amount')
-      .where('expense.spent_date >= :thisDay', { thisDay })
-      .andWhere('expense.spent_date < :nextToThisDay', { nextToThisDay })
-      .andWhere('expense.user_id = :userId', { userId })
-      .groupBy('expense.category_id')
-      .getRawMany()
-
-    const [lastWeekExpenditures, thisWeekExpenditures] = await Promise.all([
-      lastDayExpenditure,
-      thisDayExpenditure,
-    ])
-
-    const expenditureRatioByCategory = lastWeekExpenditures.map((lastWeek) => {
+  private calculateExpenditureRaitos(
+    lastWeekExpenditures: ExpenseAmount[],
+    thisWeekExpenditures: ExpenseAmount[],
+  ) {
+    return lastWeekExpenditures.map((lastWeek) => {
       const thisWeek = thisWeekExpenditures.find(
         (item) => item.categoryId === lastWeek.categoryId,
       )
-
       const lastWeekAmount = parseFloat(lastWeek.amount)
       const thisWeekAmount = thisWeek ? parseFloat(thisWeek.amount) : 0
       const ratio =
-        thisWeekAmount > 0 ? (lastWeekAmount / thisWeekAmount) * 100 : 0
-
+        thisWeekAmount > 0 ? (thisWeekAmount / lastWeekAmount) * 100 : 0
       return {
         categoryId: lastWeek.categoryId,
         lastWeekAmount,
@@ -362,7 +354,12 @@ export class ExpenseService implements IExpenseSerivce {
         ratio: ratio.toFixed(2) + '%',
       }
     })
+  }
 
-    return expenditureRatioByCategory
+  // 현재 주의 시작을 계산하는 메서드
+  private getStartOfWeek(date: Date) {
+    const day = date.getDay()
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(date.setDate(diff))
   }
 }

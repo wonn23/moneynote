@@ -33,10 +33,10 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       if (!isTokenValid) {
         throw new UnauthorizedException('유효한 토큰이 아닙니다.')
       }
-      return payload.userId
+      return isTokenValid
     } catch (error) {
       console.error('JwtRefreshTokenStrategy validate Error:', error)
-      throw error // Optionally rethrow the error if you want to propagate it upwards
+      throw error
     }
   }
 }

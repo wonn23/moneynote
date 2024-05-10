@@ -534,36 +534,40 @@ describe('ExpenseService', () => {
         { categoryId: 3, amount: 500 },
       ]
 
-      expenseRepository.createQueryBuilder.mockReturnValue({
+      const mockQueryBuilder = {
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
         getRawMany: jest.fn(),
-      })
+      }
 
-      expenseRepository
-        .createQueryBuilder()
-        .getRawMany.mockResolvedValueOnce(mockLastWeekExpenditures)
-        .mockResolvedValue(mockThisWeekExpenditures)
+      expenseRepository.createQueryBuilder.mockImplementation(
+        () => mockQueryBuilder,
+      )
+      mockQueryBuilder.getRawMany
+        .mockResolvedValueOnce(mockLastWeekExpenditures)
+        .mockResolvedValueOnce(mockThisWeekExpenditures)
 
-      const results = await expenseService.compareRatioToLastWeek(userId)
-
-      expect(results).toEqual([
+      const expectedResult = [
         {
           categoryId: 2,
           lastWeekAmount: 1000,
           thisWeekAmount: 2000,
-          ratio: '50.00%',
+          ratio: '200.00%',
         },
         {
           categoryId: 3,
           lastWeekAmount: 2000,
           thisWeekAmount: 500,
-          ratio: '400.00%',
+          ratio: '25.00%',
         },
-      ])
+      ]
+
+      const result = await expenseService.compareRatioToLastWeek(userId)
+
+      expect(result).toEqual(expectedResult)
     })
   })
 })
