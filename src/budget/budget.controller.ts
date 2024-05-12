@@ -33,7 +33,7 @@ import { BudgetAmount } from './interfaces/budget-design.interface'
 import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('예산')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAccessAuthGuard)
 @Controller('budgets')
 export class BudgetController {

@@ -10,16 +10,16 @@ import {
 
 // 회원가입 DTO
 export class CreateUserDto {
-  @ApiProperty({ description: '이름' })
+  @ApiProperty({ description: '이름', example: 'testUsername' })
   @IsString()
   @MaxLength(20)
   username: string
 
-  @ApiProperty({ description: '이메일' })
+  @ApiProperty({ description: '이메일', example: 'test@example.com' })
   @IsEmail()
   email: string
 
-  @ApiProperty({ description: '비밀번호' })
+  @ApiProperty({ description: '비밀번호', example: '1q2w3e4r5t!' })
   @IsString()
   @MinLength(10, { message: '최소 10자리 이상 작성해야 합니다.' })
   @MaxLength(20)
@@ -28,7 +28,7 @@ export class CreateUserDto {
   })
   password: string
 
-  @ApiProperty({ description: '알림 수신 동의' })
+  @ApiProperty({ description: '알림 수신 동의', example: false })
   @IsBoolean()
   consultingYn: boolean
 }

@@ -30,7 +30,7 @@ import { RecommendedExpense } from './interfaces/expense-recommend.interface'
 import { JwtAccessAuthGuard } from 'src/auth/guard/jwt-access.guard'
 
 @ApiTags('지출')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAccessAuthGuard)
 @Controller('expense')
 export class ExpenseController {

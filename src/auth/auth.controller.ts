@@ -1,8 +1,12 @@
-import { Controller, Post, Get, Req } from '@nestjs/common'
+import { Controller, Post, Get, Req, Res, Body } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -12,9 +16,10 @@ import { CurrentUser } from '../common/decorator/current-user.decorator'
 import { JwtAccessAuthGuard } from './guard/jwt-access.guard'
 import { LocalAuthGuard } from './guard/local.guard'
 import { JwtRefreshAuthGuard } from './guard/jwt-refresh.guard'
-import { TokenResponse } from './interfaces/token-response.interface'
 import { User } from 'src/user/entities/user.entity'
 import { GoogleAuthGuard } from './guard/google.guard'
+import { Response } from 'express'
+import { LoginDto } from 'src/user/dto/login-user.dto'
 
 @ApiTags('인증/인가')
 @Controller('auth')
@@ -25,13 +30,24 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @ApiOperation({
     summary: '로그인',
-    description: 'Access Token, Refresh Token 발급',
+    description:
+      'Access Token, Refresh Token 발급. 로그인 후 나온 accessToken을 authorize에 입력해주세요.',
   })
-  @ApiResponse({ status: 201, description: 'success' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 500, description: 'InternalServerError.' })
-  logIn(@CurrentUser() user: User): Promise<TokenResponse> {
-    return this.authService.logIn(user)
+  @ApiCreatedResponse({ description: '로그인 성공' })
+  @ApiBadRequestResponse({ description: '로그인 실패' })
+  @ApiInternalServerErrorResponse({ description: '서버 에러' })
+  @ApiBody({ type: LoginDto })
+  @ApiBearerAuth('access-token')
+  async logIn(
+    @CurrentUser() user: User,
+    @Body() loginDto: LoginDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { accessToken, refreshToken } = await this.authService.logIn(
+      user,
+      res,
+    )
+    res.send({ user, accessToken, refreshToken })
   }
 
   @Post('/logout')
@@ -42,6 +58,7 @@ export class AuthController {
   })
   @ApiOkResponse({ description: '로그아웃 성공.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBearerAuth('access-token')
   async logOut(@CurrentUser() userId: string): Promise<{ message: string }> {
     await this.authService.logOut(userId)
     return { message: '로그아웃 성공.' }
@@ -54,6 +71,7 @@ export class AuthController {
     description: '인증된 사용자인지 확인합니다.',
   })
   @ApiOkResponse({ description: '인증된 사용자입니다.' })
+  @ApiBearerAuth('access-token')
   async isLoggedIn(@CurrentUser() userId: string): Promise<boolean> {
     return userId ? true : false
   }
@@ -86,10 +104,10 @@ export class AuthController {
     description:
       'Access Token 만료시 Refresh Token을 확인하여 새로운 Access Token을 발급합니다.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'success' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtRefreshAuthGuard)
   async refreshAccessToken(
     @CurrentUser() userId: string,

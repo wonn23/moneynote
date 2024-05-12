@@ -5,6 +5,7 @@ import { ValidationPipe, Logger } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter'
 import { NestExpressApplication } from '@nestjs/platform-express'
+import * as cookieParser from 'cookie-parser'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -20,10 +21,19 @@ async function bootstrap() {
     .setTitle('moneynote') // 프로젝트 명 바꾸기
     .setDescription('The moneynote API description') // 프로젝트 설명 추가
     .setVersion('1.0.0')
-    .addBearerAuth()
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
     .build()
   const document = SwaggerModule.createDocument(app, swaggerConfig)
   SwaggerModule.setup('swagger', app, document)
+
+  app.use(cookieParser())
 
   app.useGlobalPipes(
     new ValidationPipe({
