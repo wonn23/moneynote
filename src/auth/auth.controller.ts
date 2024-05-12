@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Req, Res, Body } from '@nestjs/common'
+import { Controller, Post, Get, Req, Res } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { UseGuards } from '@nestjs/common'
 import {
@@ -38,15 +38,11 @@ export class AuthController {
   @ApiInternalServerErrorResponse({ description: '서버 에러' })
   @ApiBody({ type: LoginDto })
   @ApiBearerAuth('access-token')
-  async logIn(
-    @CurrentUser() user: User,
-    @Body() loginDto: LoginDto,
-    @Res() res: Response,
-  ): Promise<void> {
-    const { accessToken, refreshToken } = await this.authService.logIn(
-      user,
-      res,
-    )
+  async logIn(@CurrentUser() user: User, @Res() res: Response): Promise<void> {
+    const { accessToken, refreshToken } = await this.authService.logIn(user)
+    res.cookie('Authentication', accessToken, {
+      httpOnly: true,
+    })
     res.send({ user, accessToken, refreshToken })
   }
 

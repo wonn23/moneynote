@@ -11,7 +11,6 @@ import { User } from 'src/user/entities/user.entity'
 import { ICACHE_SERVICE } from 'src/common/utils/constants'
 import { ICacheService } from 'src/cache/cache.service.interface'
 import { UserRepository } from 'src/user/user.repository'
-import { Response } from 'express'
 import { TokenResponse } from './interfaces/token-response.interface'
 
 @Injectable()
@@ -24,15 +23,11 @@ export class AuthService {
     private readonly cacheService: ICacheService,
   ) {}
 
-  async logIn(user: User, res: Response): Promise<TokenResponse> {
+  async logIn(user: User): Promise<TokenResponse> {
     const accessToken = await this.generateAccessToken(user.id)
     const refreshToken = await this.generateRefreshToken(user.id)
 
     await this.setRefreshToken(user.id, refreshToken)
-
-    res.cookie('Authentication', accessToken, {
-      httpOnly: true,
-    })
 
     return { accessToken, refreshToken }
   }

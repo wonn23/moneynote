@@ -6,6 +6,7 @@ import {
   MockServiceFactory,
 } from 'src/common/utils/mock-service.factory'
 import { User } from 'src/user/entities/user.entity'
+import { Response } from 'express'
 
 const mockUser = {
   id: 'testUserId',
@@ -48,17 +49,26 @@ describe('AuthController', () => {
 
   describe('login', () => {
     it('이메일과 비밀번호가 일치해서 토큰을 반환합니다.', async () => {
-      const result = {
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
+      const mockResponse: Partial<Response> = {
+        cookie: jest.fn(),
+        send: jest.fn().mockImplementation((result) => {
+          return result
+        }),
       }
 
-      authService.logIn.mockResolvedValue(result)
+      authService.logIn.mockResolvedValue({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      })
 
-      const response = await authController.logIn(mockUser)
+      await authController.logIn(mockUser, mockResponse as Response)
 
-      expect(authService.logIn).toBeCalledWith(mockUser)
-      expect(response).toEqual(result)
+      expect(authService.logIn).toHaveBeenCalledWith(mockUser)
+      expect(mockResponse.send).toHaveBeenCalledWith({
+        user: mockUser,
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      })
     })
   })
 
