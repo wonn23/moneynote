@@ -12,7 +12,6 @@ import { CacheProvider } from './cache.provider'
         store: redisStore,
         host: configService.get('REDIS_HOST', 'redis'),
         port: +configService.get('REDIS_PORT', '6379'),
-        password: configService.get('REDIS_PASSWORD', '0000'),
       }),
       inject: [ConfigService],
     }),
