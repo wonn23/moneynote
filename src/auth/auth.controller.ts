@@ -39,11 +39,11 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiBearerAuth('access-token')
   async logIn(@CurrentUser() user: User, @Res() res: Response): Promise<void> {
-    const { accessToken, refreshToken } = await this.authService.logIn(user)
+    const { accessToken } = await this.authService.logIn(user)
     res.cookie('Authentication', accessToken, {
       httpOnly: true,
     })
-    res.send({ user, accessToken, refreshToken })
+    res.send({ user, accessToken })
   }
 
   @Post('/logout')

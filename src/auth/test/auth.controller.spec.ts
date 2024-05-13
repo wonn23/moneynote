@@ -58,7 +58,6 @@ describe('AuthController', () => {
 
       authService.logIn.mockResolvedValue({
         accessToken: 'access-token',
-        refreshToken: 'refresh-token',
       })
 
       await authController.logIn(mockUser, mockResponse as Response)
@@ -67,7 +66,6 @@ describe('AuthController', () => {
       expect(mockResponse.send).toHaveBeenCalledWith({
         user: mockUser,
         accessToken: 'access-token',
-        refreshToken: 'refresh-token',
       })
     })
   })

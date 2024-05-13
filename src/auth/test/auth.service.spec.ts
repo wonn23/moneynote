@@ -109,7 +109,6 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         accessToken: 'access-token',
-        refreshToken: 'refresh-token',
       })
       expect(jwtService.sign).toHaveBeenCalledTimes(2)
       expect(cacheService.set).toHaveBeenCalledWith(

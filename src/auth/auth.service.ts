@@ -29,7 +29,7 @@ export class AuthService {
 
     await this.setRefreshToken(user.id, refreshToken)
 
-    return { accessToken, refreshToken }
+    return { accessToken }
   }
 
   async getAuthenticatedUser(
