@@ -15,6 +15,9 @@ export const getORMConfig = async (
     entities: [__dirname + '/../**/*.entity.{js,ts}'],
     synchronize: false,
     namingStrategy: new SnakeNamingStrategy(),
+    ssl: {
+      rejectUnauthorized: false,
+    },
     // dropSchema: true,
     // logging: true,
   }
