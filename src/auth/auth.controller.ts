@@ -31,7 +31,7 @@ export class AuthController {
   @ApiOperation({
     summary: '로그인',
     description:
-      'Access Token, Refresh Token 발급. 로그인 후 나온 accessToken을 authorize에 입력해주세요.',
+      'Access Token과 Refresh Token 발급합니다. 테스트 시, Authorize의 access token에 입력해주세요.',
   })
   @ApiCreatedResponse({ description: '로그인 성공' })
   @ApiBadRequestResponse({ description: '로그인 실패' })
@@ -39,11 +39,11 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiBearerAuth('access-token')
   async logIn(@CurrentUser() user: User, @Res() res: Response): Promise<void> {
-    const { accessToken } = await this.authService.logIn(user)
+    const { accessToken, refreshToken } = await this.authService.logIn(user)
     res.cookie('Authentication', accessToken, {
       httpOnly: true,
     })
-    res.send({ user, accessToken })
+    res.send({ user, accessToken, refreshToken })
   }
 
   @Post('/logout')
@@ -98,12 +98,12 @@ export class AuthController {
   @ApiOperation({
     summary: 'Access 토큰 재발급',
     description:
-      'Access Token 만료시 Refresh Token을 확인하여 새로운 Access Token을 발급합니다.',
+      'Access Token 만료시 Refresh Token을 확인하여 새로운 Access Token을 발급합니다. 테스트 시 Authorize에 refresh token에 입력해주세요.',
   })
   @ApiResponse({ status: 200, description: 'success' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'InternalServerError.' })
-  @ApiBearerAuth('access-token')
+  @ApiBearerAuth('refresh-token')
   @UseGuards(JwtRefreshAuthGuard)
   async refreshAccessToken(
     @CurrentUser() userId: string,
