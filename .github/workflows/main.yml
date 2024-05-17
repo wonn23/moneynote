@@ -65,6 +65,7 @@ jobs:
           docker rm ${{ env.CONTAINER_NAME }} || true
           docker rmi ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest || true
           docker run -d -p 80:80 \
+            --network="host" \
             --env-file /home/ubuntu/moneynote-BE/.production.env \
             --name ${{ env.CONTAINER_NAME }} \
             --restart always ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
