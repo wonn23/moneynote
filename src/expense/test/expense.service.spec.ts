@@ -218,17 +218,26 @@ describe('ExpenseService', () => {
       expect(expenseRepository.findOne).toHaveBeenCalled()
       expect(result).toEqual(expectedExpense)
     })
+
+    it('지출 ID가 존재하지 않아 NotFoundException 에러가 발생했습니다.', async () => {
+      const expenseId = 9999
+      expenseRepository.findOne.mockResolvedValue(null)
+
+      await expect(
+        expenseService.getOneExpense(expenseId, userId),
+      ).rejects.toThrow(NotFoundException)
+    })
   })
 
   describe('updateExpense', () => {
+    const updateExpenseDto: UpdateExpenseDto = {
+      amount: 12000,
+      memo: '영화',
+      isExcluded: false,
+      category: categoryEnum.curtureLife,
+    }
     it('지출 수정에 성공했습니다.', async () => {
       const expenseId = 1
-      const updateExpenseDto: UpdateExpenseDto = {
-        amount: 3000,
-        memo: '저녁 식사',
-        isExcluded: false,
-        category: categoryEnum.curtureLife,
-      }
 
       const mockExpense = {
         id: 1,
@@ -273,6 +282,16 @@ describe('ExpenseService', () => {
 
       expect(expenseRepository.save).toHaveBeenCalled()
       expect(result).toEqual(updatedExpense)
+    })
+
+    it('수정하려는 지출이 존재하지 않아 NotFoundException 에러가 발생했습니다.', async () => {
+      const expenseId = 999
+
+      expenseRepository.findOne.mockResolvedValue(null)
+
+      await expect(
+        expenseService.updateExpense(expenseId, updateExpenseDto, userId),
+      ).rejects.toThrow(NotFoundException)
     })
   })
 

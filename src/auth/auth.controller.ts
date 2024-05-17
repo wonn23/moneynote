@@ -94,7 +94,7 @@ export class AuthController {
     return user
   }
 
-  @Get('/refresh')
+  @Post('/refresh')
   @ApiOperation({
     summary: 'Access 토큰 재발급',
     description:

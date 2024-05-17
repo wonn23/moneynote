@@ -13,13 +13,17 @@ import {
 } from 'src/common/utils/mock-repository.factory'
 import { BudgetRepository } from '../budget.repository'
 import { CategoryRepository } from '../category.repository'
-import { IBudgetDesignStrategy } from '../interfaces/budget-design.interface'
+import {
+  BudgetAmount,
+  IBudgetDesignStrategy,
+  Ratio,
+} from '../interfaces/budget-design.interface'
 import {
   MockService,
   MockServiceFactory,
 } from 'src/common/utils/mock-service.factory'
 import { IBUDGET_DESIGN_STRAGTEGY } from 'src/common/utils/constants'
-import { DefaultBudgetDesignStrategy } from '../default-budget-design-strategy'
+import { DefaultBudgetDesignStrategy } from '../budget-design-strategy'
 import { CreateBudgetDto } from '../dto/create-budget.dto'
 
 const mockUser = {
@@ -112,12 +116,78 @@ describe('BudgetService', () => {
       expect(budgetRepository.save).toHaveBeenCalled()
       expect(result).toEqual(expectedBudget)
     })
+
+    it('카테고리 이름이 없을 때 NotFoundException을 발생시킵니다.', async () => {
+      const userId = mockUser.id
+      const createBudgetDto: CreateBudgetDto = {
+        year: 2024,
+        month: 1,
+        amount: 1000000,
+        category: categoryEnum.food,
+      }
+
+      categoryRepository.findOneBy.mockResolvedValue(undefined)
+
+      await expect(
+        budgetService.createBudget(createBudgetDto, userId),
+      ).rejects.toThrow(NotFoundException)
+    })
   })
 
   describe('designBudget', () => {
-    it('설정한 전체 예산과 유저들의 평균 비율을 게산하여 예산을 설계합니다.', async () => {})
+    it('설정한 전체 예산과 유저들의 평균 비율을 계산하여 예산을 설계합니다.', async () => {
+      const ratios: Ratio[] = [
+        { categoryName: categoryEnum.food, ratio: '0.25' },
+        { categoryName: categoryEnum.transportation, ratio: '0.2' },
+        { categoryName: categoryEnum.curtureLife, ratio: '0.1' },
+        { categoryName: categoryEnum.housingCommunication, ratio: '0.25' },
+        { categoryName: categoryEnum.dailyNeccessities, ratio: '0.1' },
+        { categoryName: categoryEnum.other, ratio: '0.1' },
+      ]
+      const year = 2024
+      const month = 5
+      const totalAmount = 2000000
+      const expectedBudgetAmounts: BudgetAmount[] = [
+        { categoryName: categoryEnum.food, budgetAmount: 500000 },
+        { categoryName: categoryEnum.transportation, budgetAmount: 400000 },
+        { categoryName: categoryEnum.curtureLife, budgetAmount: 200000 },
+        {
+          categoryName: categoryEnum.housingCommunication,
+          budgetAmount: 500000,
+        },
+        { categoryName: categoryEnum.dailyNeccessities, budgetAmount: 200000 },
+        { categoryName: categoryEnum.other, budgetAmount: 200000 },
+      ]
 
-    it('예산 설계 도출 중 InternalServerErrorException에러 발생합니다.', async () => {})
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn(),
+      }
+
+      budgetRepository.createQueryBuilder.mockImplementation(
+        () => mockQueryBuilder,
+      )
+      mockQueryBuilder.getRawMany.mockResolvedValue(ratios)
+
+      budgetDesignStrategy.designBudget.mockReturnValue(expectedBudgetAmounts)
+      budgetService.designBudget = jest
+        .fn()
+        .mockResolvedValue(expectedBudgetAmounts)
+
+      const result = await budgetService.designBudget(totalAmount, year, month)
+
+      expect(budgetService.designBudget).toHaveBeenCalledWith(
+        totalAmount,
+        year,
+        month,
+      )
+      expect(result).toEqual(expectedBudgetAmounts)
+    })
   })
 
   describe('findBudgets', () => {
