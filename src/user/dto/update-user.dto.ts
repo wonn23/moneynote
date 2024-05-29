@@ -7,9 +7,8 @@ import {
   MinLength,
 } from 'class-validator'
 
-// 회원가입 DTO
 export class UpdateUserDto {
-  @ApiProperty({ description: '계정' })
+  @ApiProperty({ description: '이름' })
   @IsString()
   @MinLength(4)
   @MaxLength(20)

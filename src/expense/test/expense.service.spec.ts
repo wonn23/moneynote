@@ -285,8 +285,7 @@ describe('ExpenseService', () => {
     })
 
     it('수정하려는 지출이 존재하지 않아 NotFoundException 에러가 발생했습니다.', async () => {
-      const expenseId = 999
-
+      const expenseId = 9999
       expenseRepository.findOne.mockResolvedValue(null)
 
       await expect(

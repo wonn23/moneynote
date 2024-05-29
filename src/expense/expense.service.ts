@@ -131,6 +131,7 @@ export class ExpenseService implements IExpenseSerivce {
 
     const expense = await this.expenseRepository.findOne({
       where: { id: expenseId, user: { id: userId } },
+      relations: ['category'],
     })
 
     if (!expense) {
