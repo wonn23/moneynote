@@ -17,6 +17,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       | string
       | { error: string; statusCode: number; message: string | string[] }
 
+    // 예외 응답이 문자인 경우
     if (typeof error === 'string') {
       response.status(status).json({
         success: false,
@@ -24,6 +25,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         path: request.url,
         error,
       })
+
+      // 예외 응답이 객체인경우
     } else {
       response.status(status).json({
         success: false,

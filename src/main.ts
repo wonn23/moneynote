@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { ConfigService } from '@nestjs/config'
 import { ValidationPipe, Logger } from '@nestjs/common'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger'
 import { HttpExceptionFilter } from './common/exceptions/http-exception.filter'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import * as cookieParser from 'cookie-parser'
@@ -38,7 +38,10 @@ async function bootstrap() {
       'refresh-token',
     )
     .build()
-  const document = SwaggerModule.createDocument(app, swaggerConfig)
+  const document: OpenAPIObject = SwaggerModule.createDocument(
+    app,
+    swaggerConfig,
+  )
   SwaggerModule.setup('swagger', app, document)
 
   app.use(cookieParser())

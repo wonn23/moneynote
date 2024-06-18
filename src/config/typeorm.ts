@@ -13,9 +13,9 @@ export const getORMConfig = async (
     password: configService.get<string>('DB_PASSWORD') || '0000',
     database: configService.get<string>('DB_DATABASE') || 'postgres',
     entities: [__dirname + '/../**/*.entity.{js,ts}'],
-    // ssl: {
-    //   rejectUnauthorized: false,
-    // },
+    ssl: {
+      rejectUnauthorized: false,
+    },
     synchronize: false,
     namingStrategy: new SnakeNamingStrategy(),
     // dropSchema: true,
