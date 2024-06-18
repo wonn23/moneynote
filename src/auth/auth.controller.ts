@@ -21,7 +21,7 @@ import { GoogleAuthGuard } from './guard/google.guard'
 import { Response } from 'express'
 import { LoginDto } from 'src/user/dto/login-user.dto'
 
-@ApiTags('인증/인가')
+@ApiTags('인증')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
